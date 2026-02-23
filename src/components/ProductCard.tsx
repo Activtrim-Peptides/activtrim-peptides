@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ShoppingCart, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
@@ -24,15 +25,17 @@ const ProductCard = ({ id, name, price, category, description, is_best_seller }:
         </Badge>
       )}
 
-      <div className="mb-4 flex h-32 items-center justify-center rounded-md bg-muted">
-        <FlaskConical className="h-12 w-12 text-primary/40" />
-      </div>
+      <Link to={`/app/product/${id}`} className="block group/link">
+        <div className="mb-4 flex h-32 items-center justify-center rounded-md bg-muted transition-colors group-hover/link:bg-muted/80">
+          <FlaskConical className="h-12 w-12 text-primary/40" />
+        </div>
 
-      <Badge variant="outline" className="mb-2 w-fit border-primary/30 text-primary text-[10px]">
-        {category}
-      </Badge>
+        <Badge variant="outline" className="mb-2 w-fit border-primary/30 text-primary text-[10px]">
+          {category}
+        </Badge>
 
-      <h3 className="mb-1 text-base font-bold uppercase tracking-wide text-foreground">{name}</h3>
+        <h3 className="mb-1 text-base font-bold uppercase tracking-wide text-foreground group-hover/link:text-primary transition-colors">{name}</h3>
+      </Link>
       <p className="mb-4 line-clamp-2 text-xs text-muted-foreground leading-relaxed">{description}</p>
 
       <div className="mt-auto flex items-center justify-between">
