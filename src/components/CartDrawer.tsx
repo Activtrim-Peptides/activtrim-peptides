@@ -2,10 +2,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const CartDrawer = () => {
   const { items, isOpen, setIsOpen, removeFromCart, updateQuantity, subtotal } = useCart();
+  const navigate = useNavigate();
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -59,7 +60,7 @@ const CartDrawer = () => {
               </div>
               <Button
                 className="w-full gradient-primary text-primary-foreground font-bold uppercase tracking-wider"
-                onClick={() => toast.info("Checkout coming soon!")}
+                onClick={() => { setIsOpen(false); navigate("/app/checkout"); }}
               >
                 Checkout
               </Button>

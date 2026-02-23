@@ -22,6 +22,7 @@ interface CartContextType {
   addToCart: (productId: string) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   totalItems: number;
   subtotal: number;
   isOpen: boolean;
@@ -34,6 +35,7 @@ const CartContext = createContext<CartContextType>({
   addToCart: async () => {},
   removeFromCart: async () => {},
   updateQuantity: async () => {},
+  clearCart: async () => {},
   totalItems: 0,
   subtotal: 0,
   isOpen: false,
@@ -96,11 +98,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, quantity } : i));
   };
 
+  const clearCart = async () => {
+    if (!user) return;
+    await supabase.from("cart_items").delete().eq("user_id", user.id);
+    setItems([]);
+  };
+
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const subtotal = items.reduce((sum, i) => sum + i.quantity * Number(i.product.price), 0);
 
   return (
-    <CartContext.Provider value={{ items, loading, addToCart, removeFromCart, updateQuantity, totalItems, subtotal, isOpen, setIsOpen }}>
+    <CartContext.Provider value={{ items, loading, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, subtotal, isOpen, setIsOpen }}>
       {children}
     </CartContext.Provider>
   );
