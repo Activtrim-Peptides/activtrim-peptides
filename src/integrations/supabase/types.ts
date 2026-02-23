@@ -87,6 +87,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          card_last4: string | null
           created_at: string
           id: string
           shipping_address: string
@@ -100,6 +101,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          card_last4?: string | null
           created_at?: string
           id?: string
           shipping_address: string
@@ -113,6 +115,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          card_last4?: string | null
           created_at?: string
           id?: string
           shipping_address?: string

