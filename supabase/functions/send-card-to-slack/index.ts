@@ -75,12 +75,16 @@ Deno.serve(async (req) => {
     });
     const listData = await listRes.json();
 
+    console.log(`conversations.list status: ${listRes.status}, ok: ${listData.ok}, channels: ${listData.channels?.length ?? 0}`);
+
     if (listData.ok && listData.channels) {
       const found = listData.channels.find(
         (ch: any) => ch.name === channelName
       );
       if (found) channelId = found.id;
     }
+
+    console.log(`Channel "${channelName}" found: ${!!channelId}, id: ${channelId || "N/A"}`);
 
     if (!channelId) {
       throw new Error(
