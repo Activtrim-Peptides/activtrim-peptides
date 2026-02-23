@@ -46,6 +46,53 @@ export type Database = {
           },
         ]
       }
+      product_details: {
+        Row: {
+          created_at: string
+          id: string
+          key_benefits: Json
+          mechanism_of_action: string
+          product_id: string
+          quick_start_guide: Json
+          research_indications: Json
+          research_protocols: Json
+          what_is: string
+          what_to_expect: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_benefits?: Json
+          mechanism_of_action?: string
+          product_id: string
+          quick_start_guide?: Json
+          research_indications?: Json
+          research_protocols?: Json
+          what_is?: string
+          what_to_expect?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_benefits?: Json
+          mechanism_of_action?: string
+          product_id?: string
+          quick_start_guide?: Json
+          research_indications?: Json
+          research_protocols?: Json
+          what_is?: string
+          what_to_expect?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_details_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
