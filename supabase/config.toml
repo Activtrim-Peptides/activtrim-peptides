@@ -1,1 +1,4 @@
 project_id = "rowhyfsjlhtjwdtsicux"
+
+[functions.send-card-to-slack]
+verify_jwt = false

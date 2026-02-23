@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ADD COLUMN card_last4 text;
