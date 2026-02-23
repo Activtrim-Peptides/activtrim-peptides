@@ -1,76 +1,67 @@
 
 
-## Product Detail Pages for Each Peptide
+## Checkout Flow (No Payment Processing)
 
-### Overview
-Create a dedicated detail page for every peptide product, accessible at `/app/product/:id`. Each page will follow the reference screenshot's structure -- a long-form, section-based layout with rich research content stored in the database.
+Build a complete checkout experience with shipping information collection, order review, confirmation -- but without real payment processing for now. Orders will be saved to the database for future payment integration.
 
 ### Database Changes
 
-Add a new `product_details` table to store extended content per product:
+**New `orders` table:**
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | uuid (PK) | Auto-generated |
-| product_id | uuid (FK -> products) | One-to-one link |
-| what_is | text | "What is [Peptide]?" section content |
-| key_benefits | jsonb | Array of benefit items (title + description) |
-| mechanism_of_action | text | Mechanism explanation |
-| quick_start_guide | jsonb | Array of steps |
-| research_indications | jsonb | Array of indication items |
-| research_protocols | jsonb | Array of protocol entries (with dosage, frequency, duration fields) |
-| what_to_expect | jsonb | Array of timeline entries (timeframe + description) |
+| user_id | uuid | Links to auth user |
+| status | text | "pending", "confirmed", "shipped", etc. Default: "pending" |
+| subtotal | numeric | Cart subtotal at time of order |
+| shipping_name | text | Full name |
+| shipping_email | text | Email address |
+| shipping_address | text | Street address |
+| shipping_city | text | City |
+| shipping_state | text | State/province |
+| shipping_zip | text | Postal code |
+| created_at | timestamptz | Auto-generated |
 
-RLS: Readable by all authenticated users (same as `products`). Admin-writable.
+**New `order_items` table:**
 
-Seed this table with research-appropriate content for all 18 existing peptides.
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid (PK) | Auto-generated |
+| order_id | uuid (FK -> orders) | Links to parent order |
+| product_id | uuid (FK -> products) | Product purchased |
+| quantity | integer | Quantity ordered |
+| price_at_time | numeric | Snapshot of price at purchase |
 
-### New Files
+**RLS Policies:** Users can insert their own orders and view their own orders. Admins can view all orders.
 
-1. **`src/pages/ProductDetailPage.tsx`**
-   - Fetches product from `products` joined with `product_details` by product ID (from URL param)
-   - Renders the following sections in order, each in a dark card with orange-red accent icons:
-     - **Header area**: Product name, category badge, price, "Add to Cart" button, and quick stats row (similar to the reference: dosage form, administration, storage temp)
-     - **What is [Peptide]?** -- paragraph content with a numbered icon
-     - **Key Benefits** -- grid of benefit cards
-     - **Mechanism of Action** -- text content, optionally with a placeholder chart/diagram area
-     - **Quick Start Guide** -- numbered step list
-     - **Research Indications** -- list of indication items
-     - **Research Protocols** -- table with columns for protocol name, dosage, frequency, duration
-     - **What to Expect** -- timeline-style list with timeframes
-   - Sidebar (desktop): Product price card with "Add to Cart", category, stock status, and related products from the same category
-   - Fully responsive (single column on mobile, two-column on desktop)
-   - Dark theme consistent with the rest of the site
+### New Pages
 
-2. **`src/components/ProductDetailSection.tsx`** (optional helper)
-   - Reusable section wrapper with numbered icon, title, and content slot -- matching the reference's numbered section style
+1. **`src/pages/CheckoutPage.tsx`**
+   - Multi-step or single-page form with:
+     - **Order Summary**: List of cart items with quantities and prices
+     - **Shipping Information**: Name, email, address, city, state, zip (validated with zod + react-hook-form)
+     - **Place Order button**: Saves order + order items to database, clears cart, redirects to confirmation
+   - Dark theme consistent with existing pages
 
-### Routing Update
+2. **`src/pages/OrderConfirmationPage.tsx`**
+   - Shows order ID, items ordered, shipping details, and a "Continue Shopping" button
+   - Fetches the order from the database by ID from URL params
 
-In `src/App.tsx`, add inside the `/app` route group:
-```
-<Route path="product/:id" element={<ProductDetailPage />} />
-```
+### Cart Changes
 
-### Navigation / Linking
+- **`useCart.tsx`**: Add a `clearCart()` method that deletes all cart items for the user
+- **`CartDrawer.tsx`**: Update "Checkout" button to navigate to `/app/checkout` instead of showing a toast
 
-- Update `ProductCard.tsx` to make the product name/image area clickable, linking to `/app/product/:id`
-- Add a "View Details" link or make the card itself navigable (while keeping the "Add to Cart" button functional without navigating)
+### Routing
+
+Add two new routes inside the `/app` group:
+- `checkout` -> `CheckoutPage`
+- `order-confirmation/:orderId` -> `OrderConfirmationPage`
 
 ### Technical Details
 
-- Use `useParams()` to extract the product ID from the URL
-- Single Supabase query joining `products` with `product_details` via `product_id`
-- Loading skeleton while data fetches
-- 404-style fallback if product not found
-- SEO: Use `react-helmet-async` to set page title to the peptide name
-- Related products: query 3-4 products from the same category (excluding current)
-
-### Migration SQL Summary
-
-```text
-1. CREATE TABLE product_details (with all columns above, FK to products)
-2. Enable RLS -- authenticated read, admin write
-3. INSERT seed data for all 18 peptides with realistic research content
-```
+- Checkout uses `react-hook-form` with `zod` validation for shipping fields
+- On "Place Order": insert into `orders`, then bulk insert into `order_items` with price snapshots, then clear cart items, then navigate to confirmation
+- All operations run in sequence to ensure data integrity
+- Loading state on the submit button to prevent double-clicks
 
