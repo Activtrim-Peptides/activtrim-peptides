@@ -25,32 +25,38 @@ const CartDrawer = () => {
         ) : (
           <>
             <div className="flex-1 space-y-4 overflow-y-auto py-4">
-              {items.map(item => (
-                <div key={item.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-3">
-                  <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center">
-                    <ShoppingBag className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">{item.product.name}</p>
-                    <p className="text-xs text-primary">${Number(item.product.price).toFixed(2)}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="rounded bg-muted p-1 text-foreground hover:bg-surface-hover">
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="min-w-[20px] text-center text-sm font-medium text-foreground">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="rounded bg-muted p-1 text-foreground hover:bg-surface-hover">
-                        <Plus className="h-3 w-3" />
+              {items.map(item => {
+                const itemPrice = item.variant ? item.variant.price : Number(item.product.price);
+                return (
+                  <div key={item.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-3">
+                    <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center">
+                      <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {item.product.name}
+                        {item.variant && <span className="ml-1 text-xs text-muted-foreground">({item.variant.label})</span>}
+                      </p>
+                      <p className="text-xs text-primary">${itemPrice.toFixed(2)}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="rounded bg-muted p-1 text-foreground hover:bg-surface-hover">
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="min-w-[20px] text-center text-sm font-medium text-foreground">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="rounded bg-muted p-1 text-foreground hover:bg-surface-hover">
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-foreground">${(item.quantity * itemPrice).toFixed(2)}</p>
+                      <button onClick={() => removeFromCart(item.id)} className="mt-2 text-destructive hover:text-destructive/80">
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-foreground">${(item.quantity * Number(item.product.price)).toFixed(2)}</p>
-                    <button onClick={() => removeFromCart(item.id)} className="mt-2 text-destructive hover:text-destructive/80">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-border pt-4">
