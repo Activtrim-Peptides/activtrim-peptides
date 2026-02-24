@@ -174,7 +174,9 @@ export type Database = {
         Row: {
           card_last4: string | null
           created_at: string
+          discount_amount: number | null
           id: string
+          promo_code: string | null
           shipping_address: string
           shipping_city: string
           shipping_email: string
@@ -188,7 +190,9 @@ export type Database = {
         Insert: {
           card_last4?: string | null
           created_at?: string
+          discount_amount?: number | null
           id?: string
+          promo_code?: string | null
           shipping_address: string
           shipping_city: string
           shipping_email: string
@@ -202,7 +206,9 @@ export type Database = {
         Update: {
           card_last4?: string | null
           created_at?: string
+          discount_amount?: number | null
           id?: string
+          promo_code?: string | null
           shipping_address?: string
           shipping_city?: string
           shipping_email?: string
@@ -369,6 +375,42 @@ export type Database = {
           price?: number
           slug?: string
           stock_quantity?: number
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          discount_amount: number
+          discount_type: string
+          friendly_name: string
+          id: string
+          is_active: boolean
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_amount?: number
+          discount_type?: string
+          friendly_name: string
+          id?: string
+          is_active?: boolean
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_amount?: number
+          discount_type?: string
+          friendly_name?: string
+          id?: string
+          is_active?: boolean
+          valid_from?: string | null
+          valid_to?: string | null
         }
         Relationships: []
       }
