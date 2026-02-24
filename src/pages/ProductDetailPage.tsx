@@ -142,7 +142,13 @@ const ProductDetailPage = () => {
 
               {/* Quick stats */}
               {(() => {
-                const quickStats: { heading: string; details: string; description: string; is_published: boolean }[] = details?.quick_stats ?? [];
+              const defaultQuickStats = [
+                  { heading: "Typical Dosage", details: "Lyophilized", description: "Powdered form for reconstitution", is_published: true },
+                  { heading: "Administration", details: "Subcutaneous", description: "Injection method", is_published: true },
+                  { heading: "Storage", details: "2-8°C", description: "Refrigerated storage required", is_published: true },
+                ];
+                const rawStats: { heading: string; details: string; description: string; is_published: boolean }[] = details?.quick_stats ?? [];
+                const quickStats = rawStats.length > 0 ? rawStats : defaultQuickStats;
                 const published = quickStats.filter(s => s.is_published);
                 const icons = [Beaker, Syringe, Thermometer];
                 if (published.length === 0) return null;
