@@ -38,6 +38,8 @@ interface StepItem { step: string }
 interface IndicationItem { indication: string }
 interface TimelineItem { timeframe: string; description: string }
 
+interface QuickStatItem { heading: string; details: string; description: string; is_published: boolean }
+
 interface ProductDetails {
   what_is: string;
   key_benefits: BenefitItem[];
@@ -46,6 +48,7 @@ interface ProductDetails {
   research_indications: IndicationItem[];
   research_protocols: ProtocolItem[];
   what_to_expect: TimelineItem[];
+  quick_stats: QuickStatItem[];
   show_what_is: boolean;
   show_key_benefits: boolean;
   show_mechanism_of_action: boolean;
@@ -56,6 +59,12 @@ interface ProductDetails {
   show_image: boolean;
 }
 
+const defaultQuickStats: QuickStatItem[] = [
+  { heading: "Typical Dosage", details: "Lyophilized", description: "Powdered form for reconstitution", is_published: true },
+  { heading: "Administration", details: "Subcutaneous", description: "Injection method", is_published: true },
+  { heading: "Storage", details: "2-8°C", description: "Refrigerated storage required", is_published: true },
+];
+
 const emptyDetails: ProductDetails = {
   what_is: "",
   key_benefits: [],
@@ -64,6 +73,7 @@ const emptyDetails: ProductDetails = {
   research_indications: [],
   research_protocols: [],
   what_to_expect: [],
+  quick_stats: defaultQuickStats,
   show_what_is: true,
   show_key_benefits: true,
   show_mechanism_of_action: true,
@@ -160,6 +170,7 @@ const AdminPage = () => {
     const { data } = await supabase.from("product_details").select("*").eq("product_id", productId).maybeSingle();
     if (data) {
       const d = data as any;
+      const qs = (d.quick_stats as unknown as QuickStatItem[]);
       setDetails({
         what_is: d.what_is || "",
         key_benefits: (d.key_benefits as unknown as BenefitItem[]) || [],
@@ -168,6 +179,7 @@ const AdminPage = () => {
         research_indications: (d.research_indications as unknown as IndicationItem[]) || [],
         research_protocols: (d.research_protocols as unknown as ProtocolItem[]) || [],
         what_to_expect: (d.what_to_expect as unknown as TimelineItem[]) || [],
+        quick_stats: qs && qs.length > 0 ? qs : defaultQuickStats,
         show_what_is: d.show_what_is !== false,
         show_key_benefits: d.show_key_benefits !== false,
         show_mechanism_of_action: d.show_mechanism_of_action !== false,
@@ -218,6 +230,7 @@ const AdminPage = () => {
         research_indications: JSON.parse(JSON.stringify(details.research_indications)),
         research_protocols: JSON.parse(JSON.stringify(details.research_protocols)),
         what_to_expect: JSON.parse(JSON.stringify(details.what_to_expect)),
+        quick_stats: JSON.parse(JSON.stringify(details.quick_stats)),
         show_what_is: details.show_what_is,
         show_key_benefits: details.show_key_benefits,
         show_mechanism_of_action: details.show_mechanism_of_action,
@@ -570,6 +583,38 @@ const AdminPage = () => {
                         <button onClick={() => removeTimeline(i)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Quick Stats */}
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Quick Stats</label>
+                    <div className="mt-2 space-y-4">
+                      {details.quick_stats.map((qs, i) => (
+                        <div key={i} className="rounded-md border border-border bg-muted/50 p-4">
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="text-sm font-semibold text-foreground">Quick Stat {i + 1}</span>
+                            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Switch checked={qs.is_published} onCheckedChange={v => setDetails(d => ({ ...d, quick_stats: d.quick_stats.map((q, idx) => idx === i ? { ...q, is_published: v } : q) }))} />
+                              {qs.is_published ? "Published" : "Hidden"}
+                            </label>
+                          </div>
+                          <div className="grid gap-2">
+                            <div>
+                              <label className="text-xs text-muted-foreground">Heading</label>
+                              <Input value={qs.heading} onChange={e => setDetails(d => ({ ...d, quick_stats: d.quick_stats.map((q, idx) => idx === i ? { ...q, heading: e.target.value } : q) }))} className="bg-muted text-foreground border-border" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Details</label>
+                              <Input value={qs.details} onChange={e => setDetails(d => ({ ...d, quick_stats: d.quick_stats.map((q, idx) => idx === i ? { ...q, details: e.target.value } : q) }))} className="bg-muted text-foreground border-border" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Description</label>
+                              <Input value={qs.description} onChange={e => setDetails(d => ({ ...d, quick_stats: d.quick_stats.map((q, idx) => idx === i ? { ...q, description: e.target.value } : q) }))} className="bg-muted text-foreground border-border" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </TabsContent>
 

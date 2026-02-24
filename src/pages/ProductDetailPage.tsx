@@ -141,29 +141,29 @@ const ProductDetailPage = () => {
               </div>
 
               {/* Quick stats */}
-              <div className="mt-6 grid grid-cols-3 gap-4 rounded-md border border-border bg-secondary/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Beaker className="h-4 w-4 text-primary" />
-                  <div>
-                    <div className="font-semibold text-foreground">Lyophilized</div>
-                    <div>Dosage Form</div>
+              {(() => {
+                const quickStats: { heading: string; details: string; description: string; is_published: boolean }[] = details?.quick_stats ?? [];
+                const published = quickStats.filter(s => s.is_published);
+                const icons = [Beaker, Syringe, Thermometer];
+                if (published.length === 0) return null;
+                return (
+                  <div className={`mt-6 grid grid-cols-${published.length} gap-4 rounded-md border border-border bg-secondary/50 p-4`}>
+                    {published.map((stat, i) => {
+                      const Icon = icons[i] || Beaker;
+                      return (
+                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Icon className="h-4 w-4 text-primary shrink-0" />
+                          <div>
+                            <div className="font-bold text-foreground">{stat.heading}</div>
+                            <div>{stat.details}</div>
+                            {stat.description && <div>{stat.description}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Syringe className="h-4 w-4 text-primary" />
-                  <div>
-                    <div className="font-semibold text-foreground">Subcutaneous</div>
-                    <div>Administration</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Thermometer className="h-4 w-4 text-primary" />
-                  <div>
-                    <div className="font-semibold text-foreground">2-8°C</div>
-                    <div>Storage</div>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {(() => { const outOfStock = (product as any).stock_quantity <= 0; return (
               <Button
