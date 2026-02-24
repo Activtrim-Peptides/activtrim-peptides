@@ -1,122 +1,77 @@
 
 
-## Add FAQ Management to Admin Panel
+## Make Product Quick Stats Editable from Admin
 
-Currently, FAQs are hardcoded in `src/pages/FAQPage.tsx`. This plan moves them to the database so you can create, edit, delete, and publish/unpublish FAQ items from the admin panel.
+The three info items at the bottom of the product header card (currently hardcoded as "Lyophilized / Dosage Form", "Subcutaneous / Administration", "2-8C / Storage") will become database-driven, editable per product from the admin panel.
 
 ### What Changes
 
-**1. Database -- Two new tables**
+**1. Database -- Add `quick_stats` column to `product_details`**
 
-- **`faq_sections`** -- Stores FAQ category headers (e.g., "General Research Questions")
-  - `id` (uuid, primary key)
-  - `title` (text) -- section name
-  - `sort_order` (integer, default 0) -- controls display order
-  - `is_published` (boolean, default true) -- publish/unpublish toggle
-  - `created_at` (timestamp)
+Add a JSONB column `quick_stats` to `product_details` storing an array of 3 items. Each item has:
+- `heading` (e.g. "Typical Dosage")
+- `details` (e.g. "Lyophilized")
+- `description` (e.g. "Powdered form for reconstitution")
+- `is_published` (boolean, default true)
 
-- **`faq_items`** -- Stores individual Q&A pairs
-  - `id` (uuid, primary key)
-  - `section_id` (uuid, foreign key to `faq_sections`)
-  - `question` (text)
-  - `answer` (text)
-  - `sort_order` (integer, default 0) -- controls display order within section
-  - `is_published` (boolean, default true) -- publish/unpublish toggle
-  - `created_at` (timestamp)
+Default value: empty JSON array `[]`
 
-- RLS policies: Admins get full CRUD; authenticated users get read-only access to published items.
+**2. Admin Panel (`src/pages/AdminPage.tsx`)**
 
-**2. Seed existing FAQ data**
+- Add `quick_stats` to the `ProductDetails` interface and form state
+- Add a new "Quick Stats" section in the Content tab with 3 fixed slots, each showing:
+  - Heading input (labeled "Heading" in admin only)
+  - Details input (labeled "Details" in admin only)
+  - Description input (labeled "Description" in admin only)
+  - Publish/unpublish toggle
+- Save the array to `product_details.quick_stats`
 
-Insert the current hardcoded FAQ sections and items into the new tables so nothing is lost.
+**3. Product Detail Page (`src/pages/ProductDetailPage.tsx`)**
 
-**3. Admin Panel (`src/pages/AdminPage.tsx`)**
-
-Add a new top-level tab (alongside the product management) or a dedicated section for FAQ management with:
-
-- List of FAQ sections with expand/collapse to see items
-- Create/edit/delete sections
-- Create/edit/delete individual Q&A items within each section
-- Publish/unpublish toggle for both sections and individual items
-- Drag or sort-order input to control display order
-
-**4. FAQ Page (`src/pages/FAQPage.tsx`)**
-
-- Remove the hardcoded `faqSections` array
-- Fetch sections and items from the database on load
-- Only show sections where `is_published = true` and items where `is_published = true`
-- Order by `sort_order`
+- Read `quick_stats` from `details`
+- Replace the hardcoded 3-item grid with a dynamic render from the array
+- Only show items where `is_published` is true
+- Display: heading in **bold**, details below it, description below that -- no "Heading"/"Details"/"Description" labels on the frontend
+- Keep the same icon set (Beaker, Syringe, Thermometer) mapped to positions 1/2/3
 
 ### Technical Details
 
 **Migration SQL:**
 ```sql
-CREATE TABLE public.faq_sections (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  sort_order integer NOT NULL DEFAULT 0,
-  is_published boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE public.faq_items (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  section_id uuid NOT NULL REFERENCES public.faq_sections(id) ON DELETE CASCADE,
-  question text NOT NULL,
-  answer text NOT NULL,
-  sort_order integer NOT NULL DEFAULT 0,
-  is_published boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.faq_sections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.faq_items ENABLE ROW LEVEL SECURITY;
-
--- Read access for authenticated users
-CREATE POLICY "Authenticated users can view published FAQ sections"
-  ON public.faq_sections FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can view published FAQ items"
-  ON public.faq_items FOR SELECT USING (true);
-
--- Admin full access
-CREATE POLICY "Admins can insert FAQ sections"
-  ON public.faq_sections FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can update FAQ sections"
-  ON public.faq_sections FOR UPDATE USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can delete FAQ sections"
-  ON public.faq_sections FOR DELETE USING (has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can insert FAQ items"
-  ON public.faq_items FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can update FAQ items"
-  ON public.faq_items FOR UPDATE USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Admins can delete FAQ items"
-  ON public.faq_items FOR DELETE USING (has_role(auth.uid(), 'admin'));
+ALTER TABLE public.product_details
+  ADD COLUMN quick_stats jsonb NOT NULL DEFAULT '[]'::jsonb;
 ```
 
-**Seed data** (separate insert migration with all current hardcoded Q&As).
+**Data structure per item:**
+```json
+{
+  "heading": "Typical Dosage",
+  "details": "Lyophilized",
+  "description": "Powdered form requiring reconstitution",
+  "is_published": true
+}
+```
 
-**Admin UI approach:**
-- A new "FAQ" tab in the admin panel alongside product management
-- Each section shown as an expandable card with its items listed inside
-- Inline editing for questions and answers
-- Toggle switches for publish/unpublish on both sections and items
-- Numeric sort order field to control ordering
+**Frontend rendering (no labels, just the values):**
+```text
++--icon--+
+| **Typical Dosage**   (bold heading)
+| Lyophilized          (details text)
+| Powdered form...     (description text)
+```
 
-**FAQ page query:**
-```typescript
-const { data: sections } = await supabase
-  .from("faq_sections")
-  .select("*, faq_items(*)")
-  .eq("is_published", true)
-  .order("sort_order");
-// Then filter faq_items client-side for is_published = true
+**Admin rendering (with labeled inputs):**
+```text
++------------------------------------------+
+| Quick Stat 1                  [Toggle On] |
+| Heading:     [Typical Dosage           ]  |
+| Details:     [Lyophilized              ]  |
+| Description: [Powdered form...         ]  |
++------------------------------------------+
 ```
 
 ### Files Changed
 
-- New SQL migration: create `faq_sections` and `faq_items` tables with RLS
-- New SQL migration: seed existing FAQ data
-- `src/pages/AdminPage.tsx`: Add FAQ management tab with CRUD and publish toggles
-- `src/pages/FAQPage.tsx`: Replace hardcoded data with database queries
-
+- New SQL migration: add `quick_stats` JSONB column to `product_details`
+- `src/pages/AdminPage.tsx`: Add Quick Stats editor in Content tab
+- `src/pages/ProductDetailPage.tsx`: Replace hardcoded stats with dynamic rendering from database
