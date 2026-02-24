@@ -46,6 +46,68 @@ export type Database = {
           },
         ]
       }
+      faq_items: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          is_published: boolean
+          question: string
+          section_id: string
+          sort_order: number
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          question: string
+          section_id: string
+          sort_order?: number
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          question?: string
+          section_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faq_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "faq_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faq_sections: {
+        Row: {
+          created_at: string
+          id: string
+          is_published: boolean
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string
