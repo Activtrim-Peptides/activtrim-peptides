@@ -68,7 +68,7 @@ const LandingPage = () => {
         {/* Hero */}
         <section className="relative overflow-hidden py-24 md:py-36">
           <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-0 hero-bg-fade pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/50 to-background" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(18_92%_47%/0.08),transparent_70%)]" />
           <div className="container relative z-10 text-center">
             <h1 className="mx-auto max-w-4xl text-4xl font-black tracking-tight text-foreground md:text-6xl lg:text-7xl">
