@@ -200,6 +200,7 @@ export type Database = {
           mechanism_of_action: string
           product_id: string
           quick_start_guide: Json
+          quick_stats: Json
           research_indications: Json
           research_protocols: Json
           show_image: boolean
@@ -220,6 +221,7 @@ export type Database = {
           mechanism_of_action?: string
           product_id: string
           quick_start_guide?: Json
+          quick_stats?: Json
           research_indications?: Json
           research_protocols?: Json
           show_image?: boolean
@@ -240,6 +242,7 @@ export type Database = {
           mechanism_of_action?: string
           product_id?: string
           quick_start_guide?: Json
+          quick_stats?: Json
           research_indications?: Json
           research_protocols?: Json
           show_image?: boolean
