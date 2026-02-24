@@ -18,7 +18,7 @@ const LandingPage = () => {
   const [topProducts, setTopProducts] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("products").select("name, category, price").eq("is_best_seller", true).limit(6)
+    supabase.from("products").select("name, category, price").eq("is_best_seller", true).eq("in_stock", true).limit(6)
       .then(({ data }) => { if (data) setTopProducts(data); });
   }, []);
 

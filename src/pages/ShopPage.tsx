@@ -24,7 +24,7 @@ const ShopPage = () => {
 
   useEffect(() => {
     setLoading(true);
-    let query = supabase.from("products").select("*");
+    let query = supabase.from("products").select("*").eq("in_stock", true);
 
     if (selectedCategories.length > 0) {
       query = query.in("category", selectedCategories);

@@ -9,7 +9,7 @@ const BestSellersPage = () => {
 
   useEffect(() => {
     setLoading(true);
-    let query = supabase.from("products").select("*").eq("is_best_seller", true);
+    let query = supabase.from("products").select("*").eq("is_best_seller", true).eq("in_stock", true);
     if (sort === "price-asc") query = query.order("price", { ascending: true });
     else if (sort === "price-desc") query = query.order("price", { ascending: false });
     else if (sort === "newest") query = query.order("created_at", { ascending: false });

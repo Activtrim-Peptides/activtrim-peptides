@@ -17,7 +17,7 @@ const HomePage = () => {
   const [bestSellers, setBestSellers] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("products").select("*").eq("is_best_seller", true).limit(4)
+    supabase.from("products").select("*").eq("is_best_seller", true).eq("in_stock", true).limit(4)
       .then(({ data }) => { if (data) setBestSellers(data); });
   }, []);
 
