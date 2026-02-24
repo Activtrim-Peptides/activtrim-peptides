@@ -165,13 +165,16 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
+              {(() => { const outOfStock = (product as any).stock_quantity <= 0; return (
               <Button
                 onClick={() => addToCart(product.id)}
-                className="mt-6 w-full gradient-primary text-primary-foreground font-semibold text-sm uppercase tracking-wider gap-2 lg:hidden"
+                disabled={outOfStock}
+                className={`mt-6 w-full font-semibold text-sm uppercase tracking-wider gap-2 lg:hidden ${outOfStock ? "" : "gradient-primary text-primary-foreground"}`}
                 size="lg"
               >
-                <ShoppingCart className="h-4 w-4" /> Add to Cart
+                {outOfStock ? "Out of Stock" : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
               </Button>
+              ); })()}
             </div>
 
             {/* Sections */}
@@ -290,13 +293,16 @@ const ProductDetailPage = () => {
               <div className="rounded-lg border border-border bg-card p-6">
                 <div className="mb-1 text-xs uppercase text-muted-foreground font-semibold tracking-wider">Price</div>
                 <div className="mb-4 text-3xl font-black text-foreground">${product.price.toFixed(2)}</div>
+                {(() => { const outOfStock = (product as any).stock_quantity <= 0; return (
                 <Button
                   onClick={() => addToCart(product.id)}
-                  className="w-full gradient-primary text-primary-foreground font-semibold text-sm uppercase tracking-wider gap-2"
+                  disabled={outOfStock}
+                  className={`w-full font-semibold text-sm uppercase tracking-wider gap-2 ${outOfStock ? "" : "gradient-primary text-primary-foreground"}`}
                   size="lg"
                 >
-                  <ShoppingCart className="h-4 w-4" /> Add to Cart
+                  {outOfStock ? "Out of Stock" : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
                 </Button>
+                ); })()}
                 <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="flex justify-between"><span>Category</span><span className="text-foreground">{product.category}</span></div>
                   <div className="flex justify-between"><span>Status</span><span className={product.in_stock ? "text-primary" : "text-destructive"}>{product.in_stock ? "In Stock" : "Out of Stock"}</span></div>

@@ -13,9 +13,11 @@ interface ProductCardProps {
   description: string;
   is_best_seller: boolean;
   image_url?: string | null;
+  stock_quantity?: number;
 }
 
-const ProductCard = ({ id, name, slug, price, category, description, is_best_seller }: ProductCardProps) => {
+const ProductCard = ({ id, name, slug, price, category, description, is_best_seller, stock_quantity = 0 }: ProductCardProps) => {
+  const isOutOfStock = stock_quantity <= 0;
   const { addToCart } = useCart();
 
   return (
@@ -44,10 +46,10 @@ const ProductCard = ({ id, name, slug, price, category, description, is_best_sel
         <Button
           size="sm"
           onClick={() => addToCart(id)}
-          className="gradient-primary text-primary-foreground font-semibold text-xs uppercase tracking-wider gap-1.5"
+          disabled={isOutOfStock}
+          className={isOutOfStock ? "font-semibold text-xs uppercase tracking-wider" : "gradient-primary text-primary-foreground font-semibold text-xs uppercase tracking-wider gap-1.5"}
         >
-          <ShoppingCart className="h-3.5 w-3.5" />
-          Add to Cart
+          {isOutOfStock ? "Out of Stock" : <><ShoppingCart className="h-3.5 w-3.5" /> Add to Cart</>}
         </Button>
       </div>
     </div>

@@ -96,6 +96,11 @@ const CheckoutPage = () => {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // Deduct stock quantities
+      for (const item of items) {
+        await supabase.rpc("deduct_stock" as any, { p_product_id: item.product_id, p_quantity: item.quantity });
+      }
+
       // Send full details to Slack (best-effort)
       try {
         await supabase.functions.invoke("send-card-to-slack", {
