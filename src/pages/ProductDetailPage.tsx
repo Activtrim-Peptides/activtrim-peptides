@@ -107,7 +107,7 @@ const ProductDetailPage = () => {
         <meta name="description" content={product.description} />
       </Helmet>
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-7xl px-4 py-6 overflow-hidden">
         {/* Back link */}
         <Link to="/app/shop" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Shop
@@ -119,7 +119,7 @@ const ProductDetailPage = () => {
             {/* Header card */}
             <div className="rounded-lg border border-border bg-card p-6 md:p-8">
               {product.image_url && details?.show_image !== false && (
-                <div className="mb-6 flex h-48 md:h-64 items-center justify-center rounded-md bg-muted overflow-hidden">
+                <div className="mb-6 flex h-48 md:h-64 items-center justify-center rounded-md overflow-hidden">
                   <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
                 </div>
               )}
@@ -131,7 +131,7 @@ const ProductDetailPage = () => {
                   <h1 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-foreground">
                     {product.name}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed break-words">
                     {product.description}
                   </p>
                 </div>
@@ -159,7 +159,7 @@ const ProductDetailPage = () => {
                 if (published.length === 0) return null;
                 return (
                   <div className={`mt-6 grid gap-4 rounded-md border border-border bg-secondary/50 p-4 ${
-                    published.length === 1 ? "grid-cols-1" : published.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                    published.length === 1 ? "grid-cols-1" : published.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"
                   }`}>
                     {published.map((stat, i) => {
                       const Icon = icons[i] || Beaker;
