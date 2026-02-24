@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, FlaskConical, Shield, Truck, Award, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Helmet } from "react-helmet-async";
+import heroBg from "@/assets/hero-bg.png";
 
 const categories = [
   { name: "Weight Loss Peptides", desc: "Compounds studied for metabolic support and body composition research, including GLP-1 class peptides." },
@@ -66,6 +67,7 @@ const LandingPage = () => {
 
         {/* Hero */}
         <section className="relative overflow-hidden py-24 md:py-36">
+          <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-0 hero-bg-fade pointer-events-none" />
           <div className="absolute inset-0 gradient-dark" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(18_92%_47%/0.08),transparent_70%)]" />
           <div className="container relative z-10 text-center">
