@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 interface ProductCardProps {
   id: string;
   name: string;
+  slug: string;
   price: number;
   category: string;
   description: string;
@@ -14,7 +15,7 @@ interface ProductCardProps {
   image_url?: string | null;
 }
 
-const ProductCard = ({ id, name, price, category, description, is_best_seller }: ProductCardProps) => {
+const ProductCard = ({ id, name, slug, price, category, description, is_best_seller }: ProductCardProps) => {
   const { addToCart } = useCart();
 
   return (
@@ -25,7 +26,7 @@ const ProductCard = ({ id, name, price, category, description, is_best_seller }:
         </Badge>
       )}
 
-      <Link to={`/app/product/${id}`} className="block group/link">
+      <Link to={`/app/product/${slug}`} className="block group/link">
         <div className="mb-4 flex h-32 items-center justify-center rounded-md bg-muted transition-colors group-hover/link:bg-muted/80">
           <FlaskConical className="h-12 w-12 text-primary/40" />
         </div>
