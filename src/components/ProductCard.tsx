@@ -21,14 +21,14 @@ const ProductCard = ({ id, name, slug, price, category, description, is_best_sel
   const { addToCart } = useCart();
 
   return (
-    <div className="group relative flex flex-row rounded-lg border border-border bg-card p-4 card-glow-hover gap-4">
+    <div className="group relative flex flex-col sm:flex-row rounded-lg border border-border bg-card p-4 card-glow-hover gap-4">
       {is_best_seller && (
         <Badge className="absolute right-3 top-3 gradient-primary border-0 text-primary-foreground text-[10px] font-bold uppercase z-10">
           Best Seller
         </Badge>
       )}
 
-      <Link to={`/app/product/${slug}`} className="flex w-28 shrink-0 items-center justify-center rounded-md bg-muted overflow-hidden self-stretch transition-colors hover:bg-muted/80">
+      <Link to={`/app/product/${slug}`} className="flex w-full h-40 sm:w-28 sm:h-auto shrink-0 items-center justify-center rounded-md overflow-hidden sm:self-stretch">
         {image_url ? (
           <img src={image_url} alt={name} className="h-full w-full object-contain" />
         ) : (
@@ -44,15 +44,15 @@ const ProductCard = ({ id, name, slug, price, category, description, is_best_sel
         <Link to={`/app/product/${slug}`} className="group/link">
           <h3 className="mb-1 text-base font-bold uppercase tracking-wide text-foreground group-hover/link:text-primary transition-colors">{name}</h3>
         </Link>
-        <p className="mb-4 line-clamp-2 text-xs text-muted-foreground leading-relaxed">{description}</p>
+        <p className="mb-4 line-clamp-3 text-xs text-muted-foreground leading-relaxed">{description}</p>
 
-        <div className="mt-auto flex items-center justify-between">
+        <div className="mt-auto flex flex-col items-start gap-2">
           <span className="text-xl font-black text-foreground">${price.toFixed(2)}</span>
           <Button
             size="sm"
             onClick={() => addToCart(id)}
             disabled={isOutOfStock}
-            className={isOutOfStock ? "font-semibold text-xs uppercase tracking-wider" : "gradient-primary text-primary-foreground font-semibold text-xs uppercase tracking-wider gap-1.5"}
+            className={isOutOfStock ? "w-full font-semibold text-xs uppercase tracking-wider" : "w-full gradient-primary text-primary-foreground font-semibold text-xs uppercase tracking-wider gap-1.5"}
           >
             {isOutOfStock ? "Out of Stock" : <><ShoppingCart className="h-3.5 w-3.5" /> Add to Cart</>}
           </Button>
