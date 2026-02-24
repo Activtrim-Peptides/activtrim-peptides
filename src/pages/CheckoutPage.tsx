@@ -99,7 +99,8 @@ const CheckoutPage = () => {
         order_id: order.id,
         product_id: item.product_id,
         quantity: item.quantity,
-        price_at_time: Number(item.product.price),
+        price_at_time: item.variant ? item.variant.price : Number(item.product.price),
+        ...(item.variant_id ? { variant_id: item.variant_id, variant_label: item.variant?.label } : {}),
       }));
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
       if (itemsError) throw itemsError;
@@ -301,17 +302,23 @@ const CheckoutPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{item.product.name}</p>
-                    <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+              {items.map((item) => {
+                const itemPrice = item.variant ? item.variant.price : Number(item.product.price);
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {item.product.name}
+                        {item.variant && <span className="ml-1 text-xs text-muted-foreground">({item.variant.label})</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">
+                      ${(item.quantity * itemPrice).toFixed(2)}
+                    </p>
                   </div>
-                  <p className="text-sm font-semibold text-foreground">
-                    ${(item.quantity * Number(item.product.price)).toFixed(2)}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
 
               <Separator className="bg-border" />
 

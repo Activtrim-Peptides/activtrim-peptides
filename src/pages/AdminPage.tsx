@@ -40,6 +40,15 @@ interface TimelineItem { timeframe: string; description: string }
 
 interface QuickStatItem { heading: string; details: string; description: string; is_published: boolean }
 
+interface ProductVariantForm {
+  id?: string;
+  label: string;
+  strength_mg: string;
+  price: string;
+  stock_quantity: string;
+  sort_order: string;
+}
+
 interface ProductDetails {
   what_is: string;
   key_benefits: BenefitItem[];
@@ -123,6 +132,9 @@ const AdminPage = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Variants
+  const [productVariants, setProductVariants] = useState<ProductVariantForm[]>([]);
 
   // ── FAQ state ──
   const [faqSections, setFaqSections] = useState<FaqSection[]>([]);
@@ -246,6 +258,21 @@ const AdminPage = () => {
       } else {
         await supabase.from("product_details").insert(detailsPayload);
       }
+
+      // Save variants
+      // Delete existing variants and re-insert
+      await supabase.from("product_variants" as any).delete().eq("product_id", productId);
+      if (productVariants.length > 0) {
+        const variantPayloads = productVariants.map(v => ({
+          product_id: productId,
+          label: v.label,
+          strength_mg: parseInt(v.strength_mg) || 0,
+          price: parseFloat(v.price) || 0,
+          stock_quantity: parseInt(v.stock_quantity) || 0,
+          sort_order: parseInt(v.sort_order) || 0,
+        }));
+        await supabase.from("product_variants" as any).insert(variantPayloads);
+      }
     }
 
     toast.success(editing ? "Product updated" : "Product created");
@@ -267,6 +294,22 @@ const AdminPage = () => {
     fetchProducts();
   };
 
+  const fetchVariants = async (productId: string) => {
+    const { data } = await supabase.from("product_variants" as any).select("*").eq("product_id", productId).order("sort_order");
+    if (data) {
+      setProductVariants((data as any[]).map(v => ({
+        id: v.id,
+        label: v.label,
+        strength_mg: String(v.strength_mg),
+        price: String(v.price),
+        stock_quantity: String(v.stock_quantity),
+        sort_order: String(v.sort_order),
+      })));
+    } else {
+      setProductVariants([]);
+    }
+  };
+
   const startEdit = async (p: Product) => {
     setEditing(p);
     setCreating(false);
@@ -275,7 +318,7 @@ const AdminPage = () => {
       category: p.category, is_best_seller: p.is_best_seller, in_stock: p.in_stock, stock_quantity: (p.stock_quantity ?? 0).toString(),
     });
     setImageUrl(p.image_url);
-    await fetchDetails(p.id);
+    await Promise.all([fetchDetails(p.id), fetchVariants(p.id)]);
   };
 
   const resetForm = () => {
@@ -284,6 +327,7 @@ const AdminPage = () => {
     setForm({ name: "", slug: "", description: "", price: "", category: allCategories[0], is_best_seller: false, in_stock: true, stock_quantity: "0" });
     setDetails(emptyDetails);
     setImageUrl(null);
+    setProductVariants([]);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -425,7 +469,8 @@ const AdminPage = () => {
 
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="mb-4 w-full justify-start bg-muted">
-                  <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                   <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                  <TabsTrigger value="variants">Variants</TabsTrigger>
                   <TabsTrigger value="content">Content</TabsTrigger>
                   <TabsTrigger value="image">Image</TabsTrigger>
                 </TabsList>
@@ -454,7 +499,47 @@ const AdminPage = () => {
                   <Textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-4 bg-muted text-foreground border-border" rows={3} />
                 </TabsContent>
 
-                {/* === CONTENT === */}
+                {/* === VARIANTS === */}
+                <TabsContent value="variants" className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Strength Variants</label>
+                    <Button size="sm" variant="outline" onClick={() => setProductVariants(v => [...v, { label: "", strength_mg: "", price: "", stock_quantity: "0", sort_order: String(v.length) }])} className="h-7 gap-1 text-xs">
+                      <Plus className="h-3 w-3" /> Add Variant
+                    </Button>
+                  </div>
+                  {productVariants.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">No variants. Product will use base price.</p>
+                  ) : (
+                    productVariants.map((v, i) => (
+                      <div key={i} className="rounded-md border border-border bg-muted/50 p-3">
+                        <div className="grid gap-2 sm:grid-cols-5">
+                          <div>
+                            <label className="text-xs text-muted-foreground">Label</label>
+                            <Input placeholder="e.g. 5mg" value={v.label} onChange={e => setProductVariants(vs => vs.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} className="bg-muted text-foreground border-border" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Strength (mg)</label>
+                            <Input type="number" placeholder="5" value={v.strength_mg} onChange={e => setProductVariants(vs => vs.map((x, idx) => idx === i ? { ...x, strength_mg: e.target.value } : x))} className="bg-muted text-foreground border-border" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Price</label>
+                            <Input type="number" placeholder="49.99" value={v.price} onChange={e => setProductVariants(vs => vs.map((x, idx) => idx === i ? { ...x, price: e.target.value } : x))} className="bg-muted text-foreground border-border" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Stock</label>
+                            <Input type="number" placeholder="0" value={v.stock_quantity} onChange={e => setProductVariants(vs => vs.map((x, idx) => idx === i ? { ...x, stock_quantity: e.target.value } : x))} className="bg-muted text-foreground border-border" />
+                          </div>
+                          <div className="flex items-end">
+                            <button onClick={() => setProductVariants(vs => vs.filter((_, idx) => idx !== i))} className="mb-1 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+
                 <TabsContent value="content" className="space-y-6">
                   {/* What Is */}
                   <div>

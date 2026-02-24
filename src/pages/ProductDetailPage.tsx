@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
@@ -22,9 +23,18 @@ interface TimelineItem { timeframe: string; description: string; }
 interface IndicationItem { indication: string; }
 interface StepItem { step: string; }
 
+interface ProductVariant {
+  id: string;
+  label: string;
+  price: number;
+  stock_quantity: number;
+  sort_order: number;
+}
+
 const ProductDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { addToCart } = useCart();
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product-detail", slug],
@@ -39,6 +49,31 @@ const ProductDetailPage = () => {
     },
     enabled: !!slug,
   });
+
+  const { data: variants = [] } = useQuery({
+    queryKey: ["product-variants", product?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants" as any)
+        .select("*")
+        .eq("product_id", product!.id)
+        .order("sort_order");
+      if (error) throw error;
+      return (data as any[]).map((v: any) => ({
+        id: v.id,
+        label: v.label,
+        price: Number(v.price),
+        stock_quantity: v.stock_quantity,
+        sort_order: v.sort_order,
+      })) as ProductVariant[];
+    },
+    enabled: !!product?.id,
+  });
+
+  // Auto-select first variant when variants load
+  const effectiveVariant = selectedVariant || (variants.length > 0 ? variants[0] : null);
+  const currentPrice = effectiveVariant ? effectiveVariant.price : product?.price ?? 0;
+  const isOutOfStock = effectiveVariant ? effectiveVariant.stock_quantity <= 0 : (product as any)?.stock_quantity <= 0;
 
   const { data: details } = useQuery({
     queryKey: ["product-details", product?.id],
@@ -100,6 +135,24 @@ const ProductDetailPage = () => {
   const indications: IndicationItem[] = details?.research_indications ?? [];
   const steps: StepItem[] = details?.quick_start_guide ?? [];
 
+  const VariantSelector = () => variants.length > 0 ? (
+    <div className="flex flex-wrap gap-1.5">
+      {variants.map((v) => (
+        <button
+          key={v.id}
+          onClick={() => setSelectedVariant(v)}
+          className={`rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
+            (effectiveVariant?.id === v.id)
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:border-primary/40"
+          }`}
+        >
+          {v.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <>
       <Helmet>
@@ -108,7 +161,6 @@ const ProductDetailPage = () => {
       </Helmet>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        {/* Back link */}
         <Link to="/app/shop" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Shop
         </Link>
@@ -125,9 +177,16 @@ const ProductDetailPage = () => {
               )}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <Badge variant="outline" className="mb-3 border-primary/30 text-primary text-[10px]">
-                    {product.category}
-                  </Badge>
+                  <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className="border-primary/30 text-primary text-[10px]">
+                      {product.category}
+                    </Badge>
+                    {product.is_best_seller && (
+                      <Badge className="gradient-primary border-0 text-primary-foreground text-[10px] font-bold uppercase">
+                        Best Seller
+                      </Badge>
+                    )}
+                  </div>
                   <h1 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-foreground break-words [overflow-wrap:anywhere]">
                     {product.name}
                   </h1>
@@ -135,13 +194,9 @@ const ProductDetailPage = () => {
                     {product.description}
                   </p>
                 </div>
-                <div className="sm:text-right shrink-0">
-                  <div className="text-3xl font-black text-foreground">${product.price.toFixed(2)}</div>
-                  {product.is_best_seller && (
-                    <Badge className="mt-2 gradient-primary border-0 text-primary-foreground text-[10px] font-bold uppercase">
-                      Best Seller
-                    </Badge>
-                  )}
+                <div className="sm:text-right shrink-0 space-y-2">
+                  <VariantSelector />
+                  <div className="text-3xl font-black text-foreground">${currentPrice.toFixed(2)}</div>
                 </div>
               </div>
 
@@ -178,16 +233,14 @@ const ProductDetailPage = () => {
                 );
               })()}
 
-              {(() => { const outOfStock = (product as any).stock_quantity <= 0; return (
               <Button
-                onClick={() => addToCart(product.id)}
-                disabled={outOfStock}
-                className={`mt-6 w-full font-semibold text-sm uppercase tracking-wider gap-2 lg:hidden ${outOfStock ? "" : "gradient-primary text-primary-foreground"}`}
+                onClick={() => addToCart(product.id, effectiveVariant?.id)}
+                disabled={isOutOfStock}
+                className={`mt-6 w-full font-semibold text-sm uppercase tracking-wider gap-2 lg:hidden ${isOutOfStock ? "" : "gradient-primary text-primary-foreground"}`}
                 size="lg"
               >
-                {outOfStock ? "Out of Stock" : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
+                {isOutOfStock ? "Out of Stock" : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
               </Button>
-              ); })()}
             </div>
 
             {/* Sections */}
@@ -305,20 +358,23 @@ const ProductDetailPage = () => {
               {/* Purchase card */}
               <div className="rounded-lg border border-border bg-card p-6">
                 <div className="mb-1 text-xs uppercase text-muted-foreground font-semibold tracking-wider">Price</div>
-                <div className="mb-4 text-3xl font-black text-foreground">${product.price.toFixed(2)}</div>
-                {(() => { const outOfStock = (product as any).stock_quantity <= 0; return (
+                {variants.length > 0 && (
+                  <div className="mb-3">
+                    <VariantSelector />
+                  </div>
+                )}
+                <div className="mb-4 text-3xl font-black text-foreground">${currentPrice.toFixed(2)}</div>
                 <Button
-                  onClick={() => addToCart(product.id)}
-                  disabled={outOfStock}
-                  className={`w-full font-semibold text-sm uppercase tracking-wider gap-2 ${outOfStock ? "" : "gradient-primary text-primary-foreground"}`}
+                  onClick={() => addToCart(product.id, effectiveVariant?.id)}
+                  disabled={isOutOfStock}
+                  className={`w-full font-semibold text-sm uppercase tracking-wider gap-2 ${isOutOfStock ? "" : "gradient-primary text-primary-foreground"}`}
                   size="lg"
                 >
-                  {outOfStock ? "Out of Stock" : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
+                  {isOutOfStock ? "Out of Stock" : <><ShoppingCart className="h-4 w-4" /> Add to Cart</>}
                 </Button>
-                ); })()}
                 <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="flex justify-between"><span>Category</span><span className="text-foreground">{product.category}</span></div>
-                  <div className="flex justify-between"><span>Status</span><span className={(product as any).stock_quantity > 0 ? "text-primary" : "text-destructive"}>{(product as any).stock_quantity > 0 ? "In Stock" : "Out of Stock"}</span></div>
+                  <div className="flex justify-between"><span>Status</span><span className={isOutOfStock ? "text-destructive" : "text-primary"}>{isOutOfStock ? "Out of Stock" : "In Stock"}</span></div>
                 </div>
               </div>
 

@@ -15,7 +15,30 @@ const BestSellersPage = () => {
     else if (sort === "newest") query = query.order("created_at", { ascending: false });
     else query = query.order("name");
 
-    query.then(({ data }) => { setProducts(data || []); setLoading(false); });
+    query.then(async ({ data }) => {
+      const products = data || [];
+      if (products.length > 0) {
+        const productIds = products.map(p => p.id);
+        const { data: variants } = await supabase
+          .from("product_variants" as any)
+          .select("*")
+          .in("product_id", productIds)
+          .order("sort_order");
+        
+        const variantMap: Record<string, any[]> = {};
+        if (variants) {
+          for (const v of variants as any[]) {
+            if (!variantMap[v.product_id]) variantMap[v.product_id] = [];
+            variantMap[v.product_id].push(v);
+          }
+        }
+        
+        setProducts(products.map(p => ({ ...p, variants: variantMap[p.id] || [] })));
+      } else {
+        setProducts([]);
+      }
+      setLoading(false);
+    });
   }, [sort]);
 
   return (
