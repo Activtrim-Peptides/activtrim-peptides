@@ -1,67 +1,54 @@
 
 
-## Horizontal Product Card Layout (Image on Left)
+## Fix 4 Product Card Issues
 
-### Problem
-Product images are tall/portrait-oriented vials, but the card image area is landscape (wide and short). This makes the vials appear tiny with wasted horizontal space.
+### File: `src/components/ProductCard.tsx`
 
-### Solution
-Restructure the ProductCard to a horizontal layout where the image sits on the left side and the product info (name, category, description, price, button) sits on the right. This gives vertical images more room to display at a natural size.
+All 4 fixes in one edit:
 
-### File Changed
-
-**`src/components/ProductCard.tsx`**
-
-Switch from a vertical stack layout to a horizontal row layout:
-
-- Change the outer container from `flex-col` to `flex-row`
-- Image area becomes a fixed-width left column (e.g. `w-28 h-full` or `w-32`) with the image filling it vertically
-- Product info (category badge, name, description, price, button) becomes the right column using `flex-col flex-1`
-- Best Seller badge stays absolutely positioned in the top-right
-- On very small screens, the layout can stay horizontal since the image column is narrow enough
-
-```text
-Current layout:
-+---------------------------+
-|       [image area]        |
-|  Category                 |
-|  PRODUCT NAME             |
-|  Description text...      |
-|  $XX.XX    [Add to Cart]  |
-+---------------------------+
-
-New layout:
-+--------+------------------+
-|        | Category         |
-| [img]  | PRODUCT NAME     |
-|        | Description...   |
-|        | $XX.XX [Add Cart]|
-+--------+------------------+
-```
+1. **Remove dark gray background** -- Remove `bg-muted` and `hover:bg-muted/80` from the image container
+2. **Stack price above cart button** -- Change the bottom section from `flex items-center justify-between` (horizontal) to `flex flex-col items-start gap-2` (vertical), and make the button `w-full`
+3. **Fix mobile overflow** -- Change outer container from `flex-row` to `flex-col sm:flex-row`, and image link from `w-28` to `w-full h-40 sm:w-28 sm:h-auto`
+4. **Show more description** -- Change `line-clamp-2` to `line-clamp-3`
 
 ### Technical Details
 
-The card container changes from:
+**Line 24** -- outer container:
 ```tsx
-<div className="group relative flex flex-col rounded-lg border border-border bg-card p-5 card-glow-hover">
-```
-To:
-```tsx
-<div className="group relative flex flex-row rounded-lg border border-border bg-card p-4 card-glow-hover gap-4">
+// Before
+<div className="... flex flex-row ...">
+// After
+<div className="... flex flex-col sm:flex-row ...">
 ```
 
-The image area changes from a wide landscape box to a narrow tall column:
+**Line 31** -- image Link:
 ```tsx
-<div className="flex w-28 shrink-0 items-center justify-center rounded-md bg-muted overflow-hidden self-stretch">
-  {image_url ? (
-    <img src={image_url} alt={name} className="h-full w-full object-contain" />
-  ) : (
-    <FlaskConical className="h-10 w-10 text-primary/40" />
-  )}
+// Before
+className="flex w-28 shrink-0 ... rounded-md bg-muted overflow-hidden self-stretch ... hover:bg-muted/80"
+// After
+className="flex w-full h-40 sm:w-28 sm:h-auto shrink-0 ... rounded-md overflow-hidden sm:self-stretch"
+```
+
+**Line 47** -- description:
+```tsx
+// Before
+<p className="... line-clamp-2 ...">
+// After
+<p className="... line-clamp-3 ...">
+```
+
+**Lines 49-58** -- price/button section:
+```tsx
+// Before
+<div className="mt-auto flex items-center justify-between">
+  <span ...>${price}</span>
+  <Button size="sm" className="...">...</Button>
+</div>
+
+// After
+<div className="mt-auto flex flex-col items-start gap-2">
+  <span ...>${price}</span>
+  <Button size="sm" className="w-full ...">...</Button>
 </div>
 ```
-
-The text/info content wraps in a `flex-col flex-1 min-w-0` container. The Link wraps only the image + name (for clickability). Price and button row stays at the bottom via `mt-auto`.
-
-No other files need changes -- the same `ProductCard` is used by ShopPage, BestSellersPage, and ProductDetailPage's related products.
 
