@@ -147,8 +147,23 @@ const AdminPage = () => {
   const [newItemQuestion, setNewItemQuestion] = useState("");
   const [newItemAnswer, setNewItemAnswer] = useState("");
 
+  // ── Promo codes state ──
+  const [promoCodes, setPromoCodes] = useState<any[]>([]);
+  const [promoLoading, setPromoLoading] = useState(true);
+  const [promoForm, setPromoForm] = useState({
+    id: "",
+    friendly_name: "",
+    code: "",
+    discount_type: "percentage",
+    discount_amount: "",
+    valid_from: "",
+    valid_to: "",
+    is_active: true,
+  });
+  const [promoEditing, setPromoEditing] = useState(false);
+
   // ── Top-level tab ──
-  const [adminTab, setAdminTab] = useState<"products" | "faq">("products");
+  const [adminTab, setAdminTab] = useState<"products" | "faq" | "promo">("products");
 
   const fetchProducts = async () => {
     const { data } = await supabase.from("products").select("*").order("name");
@@ -172,7 +187,66 @@ const AdminPage = () => {
     setFaqLoading(false);
   };
 
-  useEffect(() => { fetchProducts(); fetchFaqSections(); }, []);
+  const fetchPromoCodes = async () => {
+    setPromoLoading(true);
+    const { data } = await supabase.from("promo_codes" as any).select("*").order("created_at", { ascending: false });
+    setPromoCodes(data || []);
+    setPromoLoading(false);
+  };
+
+  const resetPromoForm = () => {
+    setPromoForm({ id: "", friendly_name: "", code: "", discount_type: "percentage", discount_amount: "", valid_from: "", valid_to: "", is_active: true });
+    setPromoEditing(false);
+  };
+
+  const handleSavePromo = async () => {
+    if (!promoForm.friendly_name.trim() || !promoForm.code.trim() || !promoForm.discount_amount) {
+      toast.error("Fill in name, code, and discount amount"); return;
+    }
+    const payload: any = {
+      friendly_name: promoForm.friendly_name.trim(),
+      code: promoForm.code.trim().toUpperCase(),
+      discount_type: promoForm.discount_type,
+      discount_amount: parseFloat(promoForm.discount_amount) || 0,
+      valid_from: promoForm.valid_from || null,
+      valid_to: promoForm.valid_to || null,
+      is_active: promoForm.is_active,
+    };
+    if (promoForm.id) {
+      const { error } = await supabase.from("promo_codes" as any).update(payload).eq("id", promoForm.id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Promo code updated");
+    } else {
+      const { error } = await supabase.from("promo_codes" as any).insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Promo code created");
+    }
+    resetPromoForm();
+    fetchPromoCodes();
+  };
+
+  const handleDeletePromo = async (id: string) => {
+    if (!confirm("Delete this promo code?")) return;
+    await supabase.from("promo_codes" as any).delete().eq("id", id);
+    toast.success("Promo code deleted");
+    fetchPromoCodes();
+  };
+
+  const startEditPromo = (p: any) => {
+    setPromoForm({
+      id: p.id,
+      friendly_name: p.friendly_name,
+      code: p.code,
+      discount_type: p.discount_type,
+      discount_amount: String(p.discount_amount),
+      valid_from: p.valid_from ? p.valid_from.slice(0, 10) : "",
+      valid_to: p.valid_to ? p.valid_to.slice(0, 10) : "",
+      is_active: p.is_active,
+    });
+    setPromoEditing(true);
+  };
+
+  useEffect(() => { fetchProducts(); fetchFaqSections(); fetchPromoCodes(); }, []);
 
   if (authLoading) return null;
   if (!isAdmin) return <Navigate to="/app/home" replace />;
@@ -447,6 +521,7 @@ const AdminPage = () => {
         <TabsList className="mb-6 w-full justify-start bg-muted">
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="faq">FAQ</TabsTrigger>
+          <TabsTrigger value="promo">Promo Codes</TabsTrigger>
         </TabsList>
 
         {/* ════════ PRODUCTS TAB ════════ */}
@@ -808,69 +883,32 @@ const AdminPage = () => {
                 const isExpanded = expandedSections.has(section.id);
                 return (
                   <div key={section.id} className="rounded-lg border border-border bg-card">
-                    {/* Section header */}
                     <div className="flex items-center gap-3 p-4">
                       <button onClick={() => toggleSectionExpand(section.id)} className="text-muted-foreground hover:text-foreground">
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </button>
-
                       {editingFaqSection === section.id ? (
-                        <Input
-                          autoFocus
-                          defaultValue={section.title}
-                          className="bg-muted text-foreground border-border h-8 text-sm"
+                        <Input autoFocus defaultValue={section.title} className="bg-muted text-foreground border-border h-8 text-sm"
                           onBlur={e => { handleUpdateSection(section.id, { title: e.target.value }); setEditingFaqSection(null); }}
                           onKeyDown={e => { if (e.key === "Enter") { handleUpdateSection(section.id, { title: (e.target as HTMLInputElement).value }); setEditingFaqSection(null); } }}
                         />
                       ) : (
                         <span className="text-sm font-bold text-foreground flex-1">{section.title}</span>
                       )}
-
-                      <Badge variant={section.is_published ? "default" : "secondary"} className="text-[10px]">
-                        {section.is_published ? "Published" : "Draft"}
-                      </Badge>
-
-                      <Input
-                        type="number"
-                        value={section.sort_order}
-                        onChange={e => handleUpdateSection(section.id, { sort_order: parseInt(e.target.value) || 0 })}
-                        className="bg-muted text-foreground border-border h-8 w-16 text-xs text-center"
-                        title="Sort order"
-                      />
-
-                      <Switch
-                        checked={section.is_published}
-                        onCheckedChange={v => handleUpdateSection(section.id, { is_published: v })}
-                      />
-
-                      <button onClick={() => setEditingFaqSection(section.id)} className="text-muted-foreground hover:text-primary">
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <Badge variant={section.is_published ? "default" : "secondary"} className="text-[10px]">{section.is_published ? "Published" : "Draft"}</Badge>
+                      <Input type="number" value={section.sort_order} onChange={e => handleUpdateSection(section.id, { sort_order: parseInt(e.target.value) || 0 })} className="bg-muted text-foreground border-border h-8 w-16 text-xs text-center" title="Sort order" />
+                      <Switch checked={section.is_published} onCheckedChange={v => handleUpdateSection(section.id, { is_published: v })} />
+                      <button onClick={() => setEditingFaqSection(section.id)} className="text-muted-foreground hover:text-primary"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                     </div>
-
-                    {/* Section items */}
                     {isExpanded && (
                       <div className="border-t border-border px-4 pb-4 pt-2 space-y-2">
                         {section.faq_items.map(item => (
                           <div key={item.id} className="rounded border border-border bg-muted/50 p-3">
                             {editingFaqItem === item.id ? (
                               <div className="space-y-2">
-                                <Input
-                                  defaultValue={item.question}
-                                  placeholder="Question"
-                                  className="bg-muted text-foreground border-border text-sm"
-                                  onBlur={e => handleUpdateItem(item.id, { question: e.target.value })}
-                                />
-                                <Textarea
-                                  defaultValue={item.answer}
-                                  placeholder="Answer"
-                                  className="bg-muted text-foreground border-border text-sm"
-                                  rows={3}
-                                  onBlur={e => handleUpdateItem(item.id, { answer: e.target.value })}
-                                />
+                                <Input defaultValue={item.question} placeholder="Question" className="bg-muted text-foreground border-border text-sm" onBlur={e => handleUpdateItem(item.id, { question: e.target.value })} />
+                                <Textarea defaultValue={item.answer} placeholder="Answer" className="bg-muted text-foreground border-border text-sm" rows={3} onBlur={e => handleUpdateItem(item.id, { answer: e.target.value })} />
                                 <Button size="sm" variant="outline" onClick={() => setEditingFaqItem(null)} className="text-xs">Done</Button>
                               </div>
                             ) : (
@@ -880,57 +918,26 @@ const AdminPage = () => {
                                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.answer}</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                  <Input
-                                    type="number"
-                                    value={item.sort_order}
-                                    onChange={e => handleUpdateItem(item.id, { sort_order: parseInt(e.target.value) || 0 })}
-                                    className="bg-muted text-foreground border-border h-7 w-14 text-xs text-center"
-                                    title="Sort order"
-                                  />
-                                  <Switch
-                                    checked={item.is_published}
-                                    onCheckedChange={v => handleUpdateItem(item.id, { is_published: v })}
-                                  />
-                                  <button onClick={() => setEditingFaqItem(item.id)} className="text-muted-foreground hover:text-primary">
-                                    <Edit2 className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  <Input type="number" value={item.sort_order} onChange={e => handleUpdateItem(item.id, { sort_order: parseInt(e.target.value) || 0 })} className="bg-muted text-foreground border-border h-7 w-14 text-xs text-center" title="Sort order" />
+                                  <Switch checked={item.is_published} onCheckedChange={v => handleUpdateItem(item.id, { is_published: v })} />
+                                  <button onClick={() => setEditingFaqItem(item.id)} className="text-muted-foreground hover:text-primary"><Edit2 className="h-3.5 w-3.5" /></button>
+                                  <button onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
                                 </div>
                               </div>
                             )}
                           </div>
                         ))}
-
-                        {/* Add item form */}
                         {addingSectionItem === section.id ? (
                           <div className="rounded border border-border bg-muted/50 p-3 space-y-2">
-                            <Input
-                              placeholder="Question"
-                              value={newItemQuestion}
-                              onChange={e => setNewItemQuestion(e.target.value)}
-                              className="bg-muted text-foreground border-border text-sm"
-                            />
-                            <Textarea
-                              placeholder="Answer"
-                              value={newItemAnswer}
-                              onChange={e => setNewItemAnswer(e.target.value)}
-                              className="bg-muted text-foreground border-border text-sm"
-                              rows={3}
-                            />
+                            <Input placeholder="Question" value={newItemQuestion} onChange={e => setNewItemQuestion(e.target.value)} className="bg-muted text-foreground border-border text-sm" />
+                            <Textarea placeholder="Answer" value={newItemAnswer} onChange={e => setNewItemAnswer(e.target.value)} className="bg-muted text-foreground border-border text-sm" rows={3} />
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => handleAddItem(section.id)} className="gradient-primary text-primary-foreground text-xs">Save</Button>
                               <Button size="sm" variant="outline" onClick={() => { setAddingSectionItem(null); setNewItemQuestion(""); setNewItemAnswer(""); }} className="text-xs">Cancel</Button>
                             </div>
                           </div>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => { setAddingSectionItem(section.id); setNewItemQuestion(""); setNewItemAnswer(""); }}
-                            className="h-7 gap-1 text-xs"
-                          >
+                          <Button size="sm" variant="outline" onClick={() => { setAddingSectionItem(section.id); setNewItemQuestion(""); setNewItemAnswer(""); }} className="h-7 gap-1 text-xs">
                             <Plus className="h-3 w-3" /> Add Item
                           </Button>
                         )}
@@ -939,6 +946,89 @@ const AdminPage = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ════════ PROMO CODES TAB ════════ */}
+        <TabsContent value="promo">
+          {/* Add/Edit form */}
+          <div className="mb-6 rounded-lg border border-border bg-card p-6">
+            <h2 className="text-sm font-bold uppercase text-foreground mb-4">{promoEditing ? "Edit Promo Code" : "Add Promo Code"}</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Friendly Name</label>
+                <Input placeholder="e.g. Launch Discount" value={promoForm.friendly_name} onChange={e => setPromoForm(f => ({ ...f, friendly_name: e.target.value }))} className="bg-muted text-foreground border-border" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Promo Code</label>
+                <Input placeholder="e.g. CRUNCH20" value={promoForm.code} onChange={e => setPromoForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} className="bg-muted text-foreground border-border uppercase" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Discount Type</label>
+                <select value={promoForm.discount_type} onChange={e => setPromoForm(f => ({ ...f, discount_type: e.target.value }))} className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="fixed">Fixed ($)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Discount Amount</label>
+                <Input type="number" placeholder={promoForm.discount_type === "percentage" ? "e.g. 20" : "e.g. 10.00"} value={promoForm.discount_amount} onChange={e => setPromoForm(f => ({ ...f, discount_amount: e.target.value }))} className="bg-muted text-foreground border-border" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Valid From (optional)</label>
+                <Input type="date" value={promoForm.valid_from} onChange={e => setPromoForm(f => ({ ...f, valid_from: e.target.value }))} className="bg-muted text-foreground border-border" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Valid To (optional, blank = indefinite)</label>
+                <Input type="date" value={promoForm.valid_to} onChange={e => setPromoForm(f => ({ ...f, valid_to: e.target.value }))} className="bg-muted text-foreground border-border" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <Switch checked={promoForm.is_active} onCheckedChange={v => setPromoForm(f => ({ ...f, is_active: v }))} />
+                Active
+              </label>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button onClick={handleSavePromo} className="gradient-primary text-primary-foreground font-semibold">
+                {promoEditing ? "Update" : "Create"}
+              </Button>
+              {promoEditing && <Button variant="outline" onClick={resetPromoForm}>Cancel</Button>}
+            </div>
+          </div>
+
+          {/* Promo codes list */}
+          {promoLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : promoCodes.length === 0 ? (
+            <p className="text-center text-muted-foreground py-10">No promo codes yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {promoCodes.map(p => (
+                <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-foreground">{p.friendly_name}</p>
+                      <Badge variant={p.is_active ? "default" : "secondary"} className="text-[10px]">
+                        {p.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Code: <span className="font-mono font-semibold">{p.code}</span> · {p.discount_type === "percentage" ? `${p.discount_amount}%` : `$${Number(p.discount_amount).toFixed(2)}`} off
+                      {p.valid_from && ` · From ${new Date(p.valid_from).toLocaleDateString()}`}
+                      {p.valid_to ? ` · Until ${new Date(p.valid_to).toLocaleDateString()}` : " · No expiry"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch checked={p.is_active} onCheckedChange={async v => { await supabase.from("promo_codes" as any).update({ is_active: v }).eq("id", p.id); fetchPromoCodes(); }} />
+                    <button onClick={() => startEditPromo(p)} className="text-muted-foreground hover:text-primary"><Edit2 className="h-4 w-4" /></button>
+                    <button onClick={() => handleDeletePromo(p.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </TabsContent>

@@ -60,6 +60,8 @@ Deno.serve(async (req) => {
       shippingCity,
       shippingState,
       shippingZip,
+      promoCode,
+      discountAmount,
     } = body;
 
     // Find channel by name
@@ -107,6 +109,7 @@ Deno.serve(async (req) => {
       ``,
       `💰 *Order Total*`,
       `*Subtotal:* $${Number(subtotal).toFixed(2)}`,
+      ...(promoCode ? [`*Promo Code:* ${promoCode} (-$${Number(discountAmount || 0).toFixed(2)})`] : []),
       `*Total:* $${Number(total).toFixed(2)}`,
       ``,
       `📦 *Shipping Address*`,

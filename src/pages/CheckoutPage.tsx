@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShoppingBag, ArrowLeft, CreditCard, Truck } from "lucide-react";
+import { Loader2, ShoppingBag, ArrowLeft, CreditCard, Truck, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
@@ -56,9 +56,41 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [shippingMethod, setShippingMethod] = useState("usps");
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_type: string; discount_amount: number } | null>(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
 
   const shippingCost = SHIPPING_OPTIONS.find((o) => o.id === shippingMethod)!.price;
-  const total = subtotal + shippingCost;
+  const discountAmount = appliedPromo
+    ? appliedPromo.discount_type === "percentage"
+      ? Math.min(subtotal * appliedPromo.discount_amount / 100, subtotal)
+      : Math.min(appliedPromo.discount_amount, subtotal)
+    : 0;
+  const total = (subtotal - discountAmount) + shippingCost;
+
+  const applyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setApplyingPromo(true);
+    const { data } = await supabase
+      .from("promo_codes" as any)
+      .select("*")
+      .ilike("code", promoInput.trim())
+      .eq("is_active", true)
+      .maybeSingle();
+    const promo = data as any;
+    if (!promo) { toast.error("Invalid promo code"); setApplyingPromo(false); return; }
+    const now = new Date();
+    if (promo.valid_from && new Date(promo.valid_from) > now) { toast.error("Promo code not yet active"); setApplyingPromo(false); return; }
+    if (promo.valid_to && new Date(promo.valid_to) < now) { toast.error("Promo code has expired"); setApplyingPromo(false); return; }
+    setAppliedPromo({ code: promo.code, discount_type: promo.discount_type, discount_amount: Number(promo.discount_amount) });
+    toast.success(`${promo.code} applied!`);
+    setApplyingPromo(false);
+  };
+
+  const removePromo = () => {
+    setAppliedPromo(null);
+    setPromoInput("");
+  };
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
@@ -89,6 +121,8 @@ const CheckoutPage = () => {
           shipping_state: values.state,
           shipping_zip: values.zip,
           card_last4: cardLast4,
+          promo_code: appliedPromo?.code || null,
+          discount_amount: discountAmount,
         } as any)
         .select("id")
         .single();
@@ -127,6 +161,8 @@ const CheckoutPage = () => {
             shippingCity: values.city,
             shippingState: values.state,
             shippingZip: values.zip,
+            promoCode: appliedPromo?.code || null,
+            discountAmount: discountAmount,
           },
         });
       } catch (slackErr) {
@@ -322,10 +358,55 @@ const CheckoutPage = () => {
 
               <Separator className="bg-border" />
 
+              {/* Promo code */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Tag className="h-4 w-4" />
+                  <span>Promo Code</span>
+                </div>
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{appliedPromo.code} applied!</p>
+                      <p className="text-xs text-muted-foreground">
+                        {appliedPromo.discount_type === "percentage"
+                          ? `${appliedPromo.discount_amount}% off`
+                          : `$${appliedPromo.discount_amount.toFixed(2)} off`}
+                      </p>
+                    </div>
+                    <button onClick={removePromo} className="text-muted-foreground hover:text-destructive">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter code"
+                      value={promoInput}
+                      onChange={e => setPromoInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && applyPromo()}
+                      className="bg-background border-border"
+                    />
+                    <Button type="button" variant="outline" onClick={applyPromo} disabled={applyingPromo} className="shrink-0">
+                      {applyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Subtotal</span>
                 <span className="text-sm font-semibold text-foreground">${subtotal.toFixed(2)}</span>
               </div>
+
+              {discountAmount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-primary">
+                    Discount {appliedPromo?.discount_type === "percentage" ? `(${appliedPromo.discount_amount}%)` : ""}
+                  </span>
+                  <span className="text-sm font-semibold text-primary">-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
 
               {/* Shipping options */}
               <div className="space-y-2">
