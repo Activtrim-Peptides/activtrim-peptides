@@ -23,45 +23,45 @@ interface IndicationItem { indication: string; }
 interface StepItem { step: string; }
 
 const ProductDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { addToCart } = useCart();
 
   const { data: product, isLoading } = useQuery({
-    queryKey: ["product-detail", id],
+    queryKey: ["product-detail", slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("id", id!)
+        .eq("slug", slug!)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!slug,
   });
 
   const { data: details } = useQuery({
-    queryKey: ["product-details", id],
+    queryKey: ["product-details", product?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("product_details" as any)
         .select("*")
-        .eq("product_id", id!)
+        .eq("product_id", product!.id)
         .maybeSingle();
       if (error) throw error;
       return data as any;
     },
-    enabled: !!id,
+    enabled: !!product?.id,
   });
 
   const { data: relatedProducts } = useQuery({
-    queryKey: ["related-products", product?.category, id],
+    queryKey: ["related-products", product?.category, product?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .eq("category", product!.category)
-        .neq("id", id!)
+        .neq("id", product!.id)
         .limit(3);
       if (error) throw error;
       return data;
@@ -312,7 +312,7 @@ const ProductDetailPage = () => {
                     {relatedProducts.map((rp) => (
                       <Link
                         key={rp.id}
-                        to={`/app/product/${rp.id}`}
+                        to={`/app/product/${rp.slug}`}
                         className="flex items-center gap-3 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/40"
                       >
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted">

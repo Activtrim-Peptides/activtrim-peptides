@@ -188,6 +188,7 @@ export type Database = {
           is_best_seller: boolean
           name: string
           price: number
+          slug: string
         }
         Insert: {
           category: string
@@ -199,6 +200,7 @@ export type Database = {
           is_best_seller?: boolean
           name: string
           price?: number
+          slug: string
         }
         Update: {
           category?: string
@@ -210,6 +212,7 @@ export type Database = {
           is_best_seller?: boolean
           name?: string
           price?: number
+          slug?: string
         }
         Relationships: []
       }

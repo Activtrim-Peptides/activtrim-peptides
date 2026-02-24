@@ -67,7 +67,7 @@ const AdminPage = () => {
 
   // Basic info form
   const [form, setForm] = useState({
-    name: "", description: "", price: "", category: allCategories[0],
+    name: "", slug: "", description: "", price: "", category: allCategories[0],
     is_best_seller: false, in_stock: true,
   });
 
@@ -111,6 +111,7 @@ const AdminPage = () => {
     setSaving(true);
     const payload = {
       name: form.name,
+      slug: form.slug,
       description: form.description,
       price: parseFloat(form.price),
       category: form.category,
@@ -174,7 +175,7 @@ const AdminPage = () => {
     setEditing(p);
     setCreating(false);
     setForm({
-      name: p.name, description: p.description, price: p.price.toString(),
+      name: p.name, slug: (p as any).slug || "", description: p.description, price: p.price.toString(),
       category: p.category, is_best_seller: p.is_best_seller, in_stock: p.in_stock,
     });
     setImageUrl(p.image_url);
@@ -184,7 +185,7 @@ const AdminPage = () => {
   const resetForm = () => {
     setEditing(null);
     setCreating(false);
-    setForm({ name: "", description: "", price: "", category: allCategories[0], is_best_seller: false, in_stock: true });
+    setForm({ name: "", slug: "", description: "", price: "", category: allCategories[0], is_best_seller: false, in_stock: true });
     setDetails(emptyDetails);
     setImageUrl(null);
   };
@@ -257,6 +258,7 @@ const AdminPage = () => {
             <TabsContent value="basic">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-muted text-foreground border-border" />
+                <Input placeholder="Slug (e.g. dihexa)" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} className="bg-muted text-foreground border-border" />
                 <Input placeholder="Price" type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="bg-muted text-foreground border-border" />
                 <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">
                   {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
