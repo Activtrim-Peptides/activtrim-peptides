@@ -305,8 +305,7 @@ const ProductDetailPage = () => {
                 ); })()}
                 <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="flex justify-between"><span>Category</span><span className="text-foreground">{product.category}</span></div>
-                  <div className="flex justify-between"><span>Status</span><span className={product.in_stock ? "text-primary" : "text-destructive"}>{product.in_stock ? "In Stock" : "Out of Stock"}</span></div>
-                  <div className="flex justify-between"><span>Purity</span><span className="text-foreground">≥98%</span></div>
+                  <div className="flex justify-between"><span>Status</span><span className={(product as any).stock_quantity > 0 ? "text-primary" : "text-destructive"}>{(product as any).stock_quantity > 0 ? "In Stock" : "Out of Stock"}</span></div>
                 </div>
               </div>
 
