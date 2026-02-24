@@ -1,34 +1,48 @@
 
 
-## Fix: Mobile Viewport Overflow
+## Enhanced Admin Panel
 
-### Problem
-The website is wider than the viewport on mobile devices, causing a horizontal scrollbar.
+This is a significant upgrade to the admin panel, adding full product content management, publish/unpublish controls, and image uploads.
 
-### Root Causes
+### What You'll Get
 
-1. **`src/App.css`** -- The `#root` selector applies `padding: 2rem` globally, which adds 32px padding on each side. Combined with elements already using the `container` class (which has its own `padding: 2rem`), this creates double padding and potentially pushes content beyond the viewport.
+1. **Publish/Unpublish toggle** -- Each product will have a visible published/unpublished status (using the existing `in_stock` field). You can toggle it directly from the product list or the edit form.
 
-2. **Long button text on LandingPage** -- The button "Create a Free Account to Browse All Products" (line 125-127 in `LandingPage.tsx`) contains text that is too long for small screens, causing it to overflow its container.
+2. **Full product detail editing** -- When editing a product, you'll see a tabbed interface with:
+   - **Basic Info** tab: Name, price, category, description, best seller, in-stock toggle (existing fields)
+   - **Content** tab: What is [Product], Key Benefits (add/remove items with title + description), Mechanism of Action, Quick Start Guide (add/remove steps), Research Indications (add/remove items), Research Protocols (add/remove rows with name/dosage/frequency/duration), What to Expect (add/remove timeline items with timeframe + description)
 
-3. **Missing global overflow protection** -- There is no `overflow-x: hidden` on the root or body to prevent horizontal scroll caused by decorative backgrounds or edge-case content.
+3. **Product image upload** -- An image upload area in the edit form that lets you pick a file, uploads it to cloud storage, and saves the URL to the product.
 
-### Fix Plan
-
-**File 1: `src/App.css`**
-- Remove the `padding: 2rem` from `#root` (or remove the entire file if no styles are actually needed -- the App.css file contains only boilerplate Vite starter styles that are unused)
-
-**File 2: `src/index.css`**
-- Add `overflow-x: hidden` to the `body` rule as a safety net
-
-**File 3: `src/pages/LandingPage.tsx`**
-- Make the long CTA button text wrap properly on mobile by adding `whitespace-normal text-center` classes, or shorten the text and wrap it for small screens
+4. **Create/Delete** -- Already working, but will be improved with the new form layout.
 
 ### Technical Details
 
-Changes are minimal and CSS-only (plus one button text adjustment):
+**Storage bucket (new migration):**
+- Create a `product-images` public storage bucket
+- Add RLS policies so admins can upload/delete, and anyone can view
 
-- `src/App.css`: Remove the unused `#root` padding rule (the entire file contains unused Vite boilerplate and can be cleaned up)
-- `src/index.css`: Add `overflow-x: hidden` to the existing `body` styles in the `@layer base` block
-- `src/pages/LandingPage.tsx`: Wrap the long button text or add responsive text sizing on the "Create a Free Account" button around line 125
+**Admin page rewrite (`src/pages/AdminPage.tsx`):**
+- Refactor the form into a tabbed layout using the existing `Tabs` component
+- **Basic Info tab**: Current fields + `in_stock` toggle (Switch component) for publish/unpublish
+- **Content tab**: Editable fields for all `product_details` columns:
+  - `what_is` -- textarea
+  - `key_benefits` -- dynamic list of {title, description} items with add/remove
+  - `mechanism_of_action` -- textarea
+  - `quick_start_guide` -- dynamic list of {step} items with add/remove
+  - `research_indications` -- dynamic list of {indication} items with add/remove
+  - `research_protocols` -- dynamic list of {name, dosage, frequency, duration} rows with add/remove
+  - `what_to_expect` -- dynamic list of {timeframe, description} items with add/remove
+- **Image tab**: File input with preview, uploads to `product-images` bucket, saves URL to `products.image_url`
+- On save: upsert both `products` and `product_details` rows (create `product_details` if it doesn't exist yet)
+- Product list items show in-stock badge and thumbnail
+
+**Product list enhancements:**
+- Show a green/red dot or badge for published (in stock) vs unpublished (out of stock)
+- Quick toggle button for publish/unpublish directly in the list
+- Show product image thumbnail if available
+
+**Files changed:**
+- New SQL migration: create `product-images` storage bucket with RLS policies
+- `src/pages/AdminPage.tsx`: Major rewrite with tabbed form, content editing, image upload, publish toggle
 
