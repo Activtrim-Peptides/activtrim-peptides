@@ -1,53 +1,122 @@
 
 
-## Add Product Quantity / Stock Management
+## Add FAQ Management to Admin Panel
 
-Track how many units of each product are available, show this in the admin panel only, deduct on purchase, and disable "Add to Cart" when stock reaches 0.
+Currently, FAQs are hardcoded in `src/pages/FAQPage.tsx`. This plan moves them to the database so you can create, edit, delete, and publish/unpublish FAQ items from the admin panel.
 
-### Changes
+### What Changes
 
-**1. Database Migration -- Add `stock_quantity` column to `products`**
+**1. Database -- Two new tables**
 
-Add an integer column `stock_quantity` defaulting to `0` (so existing products start at 0 and need to be set by admin).
+- **`faq_sections`** -- Stores FAQ category headers (e.g., "General Research Questions")
+  - `id` (uuid, primary key)
+  - `title` (text) -- section name
+  - `sort_order` (integer, default 0) -- controls display order
+  - `is_published` (boolean, default true) -- publish/unpublish toggle
+  - `created_at` (timestamp)
 
+- **`faq_items`** -- Stores individual Q&A pairs
+  - `id` (uuid, primary key)
+  - `section_id` (uuid, foreign key to `faq_sections`)
+  - `question` (text)
+  - `answer` (text)
+  - `sort_order` (integer, default 0) -- controls display order within section
+  - `is_published` (boolean, default true) -- publish/unpublish toggle
+  - `created_at` (timestamp)
+
+- RLS policies: Admins get full CRUD; authenticated users get read-only access to published items.
+
+**2. Seed existing FAQ data**
+
+Insert the current hardcoded FAQ sections and items into the new tables so nothing is lost.
+
+**3. Admin Panel (`src/pages/AdminPage.tsx`)**
+
+Add a new top-level tab (alongside the product management) or a dedicated section for FAQ management with:
+
+- List of FAQ sections with expand/collapse to see items
+- Create/edit/delete sections
+- Create/edit/delete individual Q&A items within each section
+- Publish/unpublish toggle for both sections and individual items
+- Drag or sort-order input to control display order
+
+**4. FAQ Page (`src/pages/FAQPage.tsx`)**
+
+- Remove the hardcoded `faqSections` array
+- Fetch sections and items from the database on load
+- Only show sections where `is_published = true` and items where `is_published = true`
+- Order by `sort_order`
+
+### Technical Details
+
+**Migration SQL:**
 ```sql
-ALTER TABLE public.products
-  ADD COLUMN stock_quantity integer NOT NULL DEFAULT 0;
+CREATE TABLE public.faq_sections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_published boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.faq_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  section_id uuid NOT NULL REFERENCES public.faq_sections(id) ON DELETE CASCADE,
+  question text NOT NULL,
+  answer text NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_published boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.faq_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.faq_items ENABLE ROW LEVEL SECURITY;
+
+-- Read access for authenticated users
+CREATE POLICY "Authenticated users can view published FAQ sections"
+  ON public.faq_sections FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can view published FAQ items"
+  ON public.faq_items FOR SELECT USING (true);
+
+-- Admin full access
+CREATE POLICY "Admins can insert FAQ sections"
+  ON public.faq_sections FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can update FAQ sections"
+  ON public.faq_sections FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can delete FAQ sections"
+  ON public.faq_sections FOR DELETE USING (has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Admins can insert FAQ items"
+  ON public.faq_items FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can update FAQ items"
+  ON public.faq_items FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can delete FAQ items"
+  ON public.faq_items FOR DELETE USING (has_role(auth.uid(), 'admin'));
 ```
 
-**2. Admin Panel (`src/pages/AdminPage.tsx`)**
+**Seed data** (separate insert migration with all current hardcoded Q&As).
 
-- Add `stock_quantity` to the `Product` interface and the form state.
-- Add a "Quantity Available" number input in the Basic Info tab (next to the price field).
-- Include `stock_quantity` in the save payload.
-- Display the current quantity in the product list table so you can see it at a glance.
+**Admin UI approach:**
+- A new "FAQ" tab in the admin panel alongside product management
+- Each section shown as an expandable card with its items listed inside
+- Inline editing for questions and answers
+- Toggle switches for publish/unpublish on both sections and items
+- Numeric sort order field to control ordering
 
-**3. Checkout Flow (`src/pages/CheckoutPage.tsx`)**
-
-- After successfully creating the order and order items, deduct the purchased quantity from each product's `stock_quantity` using an update query:
-  ```
-  For each cart item: UPDATE products SET stock_quantity = stock_quantity - item.quantity WHERE id = item.product_id
-  ```
-- This runs after the order is confirmed, before clearing the cart.
-
-**4. Product Card (`src/components/ProductCard.tsx`)**
-
-- Accept `stock_quantity` as a prop.
-- When `stock_quantity <= 0`, change the "Add to Cart" button to read **"Out of Stock"**, disable it, and style it as a muted/disabled button.
-
-**5. Product Detail Page (`src/pages/ProductDetailPage.tsx`)**
-
-- Check `product.stock_quantity` and disable/relabel the "Add to Cart" buttons (both mobile and sidebar) to "Out of Stock" when quantity is 0.
-
-**6. Cart Drawer (`src/components/CartDrawer.tsx`)**
-
-- No changes needed here since items already in cart were added when stock was available.
+**FAQ page query:**
+```typescript
+const { data: sections } = await supabase
+  .from("faq_sections")
+  .select("*, faq_items(*)")
+  .eq("is_published", true)
+  .order("sort_order");
+// Then filter faq_items client-side for is_published = true
+```
 
 ### Files Changed
 
-- New SQL migration: add `stock_quantity` column
-- `src/pages/AdminPage.tsx`: quantity input in form + display in list
-- `src/pages/CheckoutPage.tsx`: deduct stock after order
-- `src/components/ProductCard.tsx`: disable button at 0 stock
-- `src/pages/ProductDetailPage.tsx`: disable button at 0 stock
+- New SQL migration: create `faq_sections` and `faq_items` tables with RLS
+- New SQL migration: seed existing FAQ data
+- `src/pages/AdminPage.tsx`: Add FAQ management tab with CRUD and publish toggles
+- `src/pages/FAQPage.tsx`: Replace hardcoded data with database queries
 
