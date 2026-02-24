@@ -122,8 +122,10 @@ const LandingPage = () => {
             </div>
             <div className="mt-10 text-center">
               <Link to="/register">
-                <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold uppercase tracking-wider">
-                  Create a Free Account to Browse All Products <ArrowRight className="ml-2 h-4 w-4" />
+                <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold uppercase tracking-wider whitespace-normal text-center h-auto py-3">
+                  <span className="hidden sm:inline">Create a Free Account to Browse All Products</span>
+                  <span className="sm:hidden">Create Account to Browse</span>
+                  <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                 </Button>
               </Link>
             </div>
