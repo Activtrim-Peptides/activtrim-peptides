@@ -1,37 +1,44 @@
 
 
-## Fix: Quick Stats Not Showing on Product Detail Page
+## Add Fade-In Hero Background Image with Mobile Optimization
 
-### Root Cause
+### Overview
+Add the uploaded image as a fade-in background behind the hero section on the landing page, with responsive opacity for mobile readability.
 
-The `quick_stats` column is empty (`[]`) in the database for all products. When the admin opens a product, the admin panel substitutes default values (Typical Dosage, Administration, Storage) so it *looks* like stats exist -- but they were never actually saved to the database.
+### Files Changed
 
-The product detail page reads `quick_stats` directly from the database, gets an empty array, and correctly renders nothing.
+**1. Save uploaded image**
+- Copy `user-uploads://Untitled_1600_x_900_px.png` to `src/assets/hero-bg.png`
 
-### Solution
+**2. `src/index.css`**
+- Add a `hero-fade-in` keyframe animation: opacity 0 to target over 1.5s ease-out
 
-Apply the same default fallback on the product detail page so that products without explicitly saved quick stats still display the three standard items.
-
-### File Changed
-
-**`src/pages/ProductDetailPage.tsx`** (around line 145)
-
-Replace:
-```tsx
-const quickStats: { ... }[] = details?.quick_stats ?? [];
+```css
+@keyframes hero-fade-in {
+  from { opacity: 0; }
+  to { opacity: 0.25; }
+}
+.hero-bg-fade {
+  animation: hero-fade-in 1.5s ease-out forwards;
+}
 ```
 
-With a fallback to default stats when the array is empty:
-```tsx
-const defaultQuickStats = [
-  { heading: "Typical Dosage", details: "Lyophilized", description: "Powdered form for reconstitution", is_published: true },
-  { heading: "Administration", details: "Subcutaneous", description: "Injection method", is_published: true },
-  { heading: "Storage", details: "2-8°C", description: "Refrigerated storage required", is_published: true },
-];
-const rawStats = details?.quick_stats ?? [];
-const quickStats = rawStats.length > 0 ? rawStats : defaultQuickStats;
+**3. `src/pages/LandingPage.tsx`**
+- Import the hero image
+- Add an `<img>` element inside the hero section, positioned absolutely behind gradients and content
+- Use responsive opacity: lower on mobile (`md:` breakpoint bumps it up)
+- Existing gradient overlays remain untouched on top
+
+Structure:
+```text
+<section class="relative overflow-hidden ...">
+  <img src={heroBg} class="absolute inset-0 w-full h-full object-cover
+       opacity-0 hero-bg-fade md:[--hero-opacity:0.3] pointer-events-none" />
+  <div class="absolute inset-0 gradient-dark" />          (existing)
+  <div class="absolute inset-0 bg-[radial-gradient(...)]" /> (existing)
+  <div class="container relative z-10 ...">                (existing content)
+</section>
 ```
 
-This mirrors what the admin panel already does (line 182 of AdminPage.tsx), ensuring consistent behavior. Once an admin explicitly saves quick stats for a product, those saved values will take precedence over the defaults.
+Mobile: image fades to ~20% opacity. Desktop: ~30%. The dark gradient overlay on top ensures text stays crisp at all sizes. `object-cover` center-crops the image on narrow screens.
 
-No database changes needed -- this is a one-line frontend fix.
