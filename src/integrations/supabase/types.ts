@@ -140,6 +140,14 @@ export type Database = {
           quick_start_guide: Json
           research_indications: Json
           research_protocols: Json
+          show_image: boolean
+          show_key_benefits: boolean
+          show_mechanism_of_action: boolean
+          show_quick_start_guide: boolean
+          show_research_indications: boolean
+          show_research_protocols: boolean
+          show_what_is: boolean
+          show_what_to_expect: boolean
           what_is: string
           what_to_expect: Json
         }
@@ -152,6 +160,14 @@ export type Database = {
           quick_start_guide?: Json
           research_indications?: Json
           research_protocols?: Json
+          show_image?: boolean
+          show_key_benefits?: boolean
+          show_mechanism_of_action?: boolean
+          show_quick_start_guide?: boolean
+          show_research_indications?: boolean
+          show_research_protocols?: boolean
+          show_what_is?: boolean
+          show_what_to_expect?: boolean
           what_is?: string
           what_to_expect?: Json
         }
@@ -164,6 +180,14 @@ export type Database = {
           quick_start_guide?: Json
           research_indications?: Json
           research_protocols?: Json
+          show_image?: boolean
+          show_key_benefits?: boolean
+          show_mechanism_of_action?: boolean
+          show_quick_start_guide?: boolean
+          show_research_indications?: boolean
+          show_research_protocols?: boolean
+          show_what_is?: boolean
+          show_what_to_expect?: boolean
           what_is?: string
           what_to_expect?: Json
         }

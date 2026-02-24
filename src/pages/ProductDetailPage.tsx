@@ -175,13 +175,13 @@ const ProductDetailPage = () => {
             </div>
 
             {/* Sections */}
-            {details?.what_is && (
+            {details?.what_is && details?.show_what_is !== false && (
               <ProductDetailSection number={1} title={`What is ${product.name}?`}>
                 <p className="text-sm">{details.what_is}</p>
               </ProductDetailSection>
             )}
 
-            {benefits.length > 0 && (
+            {benefits.length > 0 && details?.show_key_benefits !== false && (
               <ProductDetailSection number={2} title="Key Benefits">
                 <div className="grid gap-4 sm:grid-cols-2">
                   {benefits.map((b, i) => (
@@ -197,7 +197,7 @@ const ProductDetailPage = () => {
               </ProductDetailSection>
             )}
 
-            {details?.mechanism_of_action && (
+            {details?.mechanism_of_action && details?.show_mechanism_of_action !== false && (
               <ProductDetailSection number={3} title="Mechanism of Action">
                 <div className="flex items-start gap-3">
                   <Activity className="mt-1 h-5 w-5 shrink-0 text-primary" />
@@ -206,7 +206,7 @@ const ProductDetailPage = () => {
               </ProductDetailSection>
             )}
 
-            {steps.length > 0 && (
+            {steps.length > 0 && details?.show_quick_start_guide !== false && (
               <ProductDetailSection number={4} title="Quick Start Guide">
                 <ol className="space-y-3">
                   {steps.map((s, i) => (
@@ -221,7 +221,7 @@ const ProductDetailPage = () => {
               </ProductDetailSection>
             )}
 
-            {indications.length > 0 && (
+            {indications.length > 0 && details?.show_research_indications !== false && (
               <ProductDetailSection number={5} title="Research Indications">
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {indications.map((item, i) => (
@@ -234,7 +234,7 @@ const ProductDetailPage = () => {
               </ProductDetailSection>
             )}
 
-            {protocols.length > 0 && (
+            {protocols.length > 0 && details?.show_research_protocols !== false && (
               <ProductDetailSection number={6} title="Research Protocols">
                 <div className="overflow-x-auto">
                   <Table>
@@ -261,7 +261,7 @@ const ProductDetailPage = () => {
               </ProductDetailSection>
             )}
 
-            {timeline.length > 0 && (
+            {timeline.length > 0 && details?.show_what_to_expect !== false && (
               <ProductDetailSection number={7} title="What to Expect">
                 <div className="space-y-4">
                   {timeline.map((t, i) => (
