@@ -1,26 +1,34 @@
 
 
-## Fix: Add Missing Slack Scopes for Private Channel Access
+## Fix: Mobile Viewport Overflow
 
-### Root Cause
+### Problem
+The website is wider than the viewport on mobile devices, causing a horizontal scrollbar.
 
-The `conversations.list` API call with `types=private_channel` requires the `groups:read` scope to discover private channels. The current bot connection only has `channels:read` (public channels).
+### Root Causes
 
-### Step 1: Reconnect Slack with additional scopes
+1. **`src/App.css`** -- The `#root` selector applies `padding: 2rem` globally, which adds 32px padding on each side. Combined with elements already using the `container` class (which has its own `padding: 2rem`), this creates double padding and potentially pushes content beyond the viewport.
 
-You'll be prompted to update the Slack connection to add the `groups:read` scope. This allows the bot to see the private `#activ-peptides-orders` channel.
+2. **Long button text on LandingPage** -- The button "Create a Free Account to Browse All Products" (line 125-127 in `LandingPage.tsx`) contains text that is too long for small screens, causing it to overflow its container.
 
-### Step 2: Add debug logging to the edge function
+3. **Missing global overflow protection** -- There is no `overflow-x: hidden` on the root or body to prevent horizontal scroll caused by decorative backgrounds or edge-case content.
 
-Update `supabase/functions/send-card-to-slack/index.ts` to log the response from `conversations.list` so we can diagnose any future issues. Specifically:
+### Fix Plan
 
-- Log the number of channels returned from the API
-- Log the HTTP status of the conversations.list response
-- This will help quickly identify if the issue is scope-related, pagination-related, or something else
+**File 1: `src/App.css`**
+- Remove the `padding: 2rem` from `#root` (or remove the entire file if no styles are actually needed -- the App.css file contains only boilerplate Vite starter styles that are unused)
+
+**File 2: `src/index.css`**
+- Add `overflow-x: hidden` to the `body` rule as a safety net
+
+**File 3: `src/pages/LandingPage.tsx`**
+- Make the long CTA button text wrap properly on mobile by adding `whitespace-normal text-center` classes, or shorten the text and wrap it for small screens
 
 ### Technical Details
 
-**File changed:** `supabase/functions/send-card-to-slack/index.ts`
-- Add `console.log` after the `conversations.list` call to log channel count and whether the target channel was found
-- No other logic changes needed -- the existing channel lookup and message posting code is correct
+Changes are minimal and CSS-only (plus one button text adjustment):
+
+- `src/App.css`: Remove the unused `#root` padding rule (the entire file contains unused Vite boilerplate and can be cleaned up)
+- `src/index.css`: Add `overflow-x: hidden` to the existing `body` styles in the `@layer base` block
+- `src/pages/LandingPage.tsx`: Wrap the long button text or add responsive text sizing on the "Create a Free Account" button around line 125
 
