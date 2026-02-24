@@ -16,7 +16,7 @@ interface ProductCardProps {
   stock_quantity?: number;
 }
 
-const ProductCard = ({ id, name, slug, price, category, description, is_best_seller, stock_quantity = 0 }: ProductCardProps) => {
+const ProductCard = ({ id, name, slug, price, category, description, is_best_seller, image_url, stock_quantity = 0 }: ProductCardProps) => {
   const isOutOfStock = stock_quantity <= 0;
   const { addToCart } = useCart();
 
@@ -29,8 +29,12 @@ const ProductCard = ({ id, name, slug, price, category, description, is_best_sel
       )}
 
       <Link to={`/app/product/${slug}`} className="block group/link">
-        <div className="mb-4 flex h-32 items-center justify-center rounded-md bg-muted transition-colors group-hover/link:bg-muted/80">
-          <FlaskConical className="h-12 w-12 text-primary/40" />
+        <div className="mb-4 flex h-32 items-center justify-center rounded-md bg-muted transition-colors group-hover/link:bg-muted/80 overflow-hidden">
+          {image_url ? (
+            <img src={image_url} alt={name} className="h-full w-full object-contain" />
+          ) : (
+            <FlaskConical className="h-12 w-12 text-primary/40" />
+          )}
         </div>
 
         <Badge variant="outline" className="mb-2 w-fit border-primary/30 text-primary text-[10px]">

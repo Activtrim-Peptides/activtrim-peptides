@@ -118,6 +118,11 @@ const ProductDetailPage = () => {
           <div className="space-y-6">
             {/* Header card */}
             <div className="rounded-lg border border-border bg-card p-6 md:p-8">
+              {product.image_url && details?.show_image !== false && (
+                <div className="mb-6 flex h-48 md:h-64 items-center justify-center rounded-md bg-muted overflow-hidden">
+                  <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
+                </div>
+              )}
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <Badge variant="outline" className="mb-3 border-primary/30 text-primary text-[10px]">
