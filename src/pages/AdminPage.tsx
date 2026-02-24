@@ -45,6 +45,14 @@ interface ProductDetails {
   research_indications: IndicationItem[];
   research_protocols: ProtocolItem[];
   what_to_expect: TimelineItem[];
+  show_what_is: boolean;
+  show_key_benefits: boolean;
+  show_mechanism_of_action: boolean;
+  show_quick_start_guide: boolean;
+  show_research_indications: boolean;
+  show_research_protocols: boolean;
+  show_what_to_expect: boolean;
+  show_image: boolean;
 }
 
 const emptyDetails: ProductDetails = {
@@ -55,6 +63,14 @@ const emptyDetails: ProductDetails = {
   research_indications: [],
   research_protocols: [],
   what_to_expect: [],
+  show_what_is: true,
+  show_key_benefits: true,
+  show_mechanism_of_action: true,
+  show_quick_start_guide: true,
+  show_research_indications: true,
+  show_research_protocols: true,
+  show_what_to_expect: true,
+  show_image: true,
 };
 
 const AdminPage = () => {
@@ -93,14 +109,23 @@ const AdminPage = () => {
   const fetchDetails = async (productId: string) => {
     const { data } = await supabase.from("product_details").select("*").eq("product_id", productId).maybeSingle();
     if (data) {
+      const d = data as any;
       setDetails({
-        what_is: data.what_is || "",
-        key_benefits: (data.key_benefits as unknown as BenefitItem[]) || [],
-        mechanism_of_action: data.mechanism_of_action || "",
-        quick_start_guide: (data.quick_start_guide as unknown as StepItem[]) || [],
-        research_indications: (data.research_indications as unknown as IndicationItem[]) || [],
-        research_protocols: (data.research_protocols as unknown as ProtocolItem[]) || [],
-        what_to_expect: (data.what_to_expect as unknown as TimelineItem[]) || [],
+        what_is: d.what_is || "",
+        key_benefits: (d.key_benefits as unknown as BenefitItem[]) || [],
+        mechanism_of_action: d.mechanism_of_action || "",
+        quick_start_guide: (d.quick_start_guide as unknown as StepItem[]) || [],
+        research_indications: (d.research_indications as unknown as IndicationItem[]) || [],
+        research_protocols: (d.research_protocols as unknown as ProtocolItem[]) || [],
+        what_to_expect: (d.what_to_expect as unknown as TimelineItem[]) || [],
+        show_what_is: d.show_what_is !== false,
+        show_key_benefits: d.show_key_benefits !== false,
+        show_mechanism_of_action: d.show_mechanism_of_action !== false,
+        show_quick_start_guide: d.show_quick_start_guide !== false,
+        show_research_indications: d.show_research_indications !== false,
+        show_research_protocols: d.show_research_protocols !== false,
+        show_what_to_expect: d.show_what_to_expect !== false,
+        show_image: d.show_image !== false,
       });
     } else {
       setDetails(emptyDetails);
@@ -143,6 +168,14 @@ const AdminPage = () => {
         research_indications: JSON.parse(JSON.stringify(details.research_indications)),
         research_protocols: JSON.parse(JSON.stringify(details.research_protocols)),
         what_to_expect: JSON.parse(JSON.stringify(details.what_to_expect)),
+        show_what_is: details.show_what_is,
+        show_key_benefits: details.show_key_benefits,
+        show_mechanism_of_action: details.show_mechanism_of_action,
+        show_quick_start_guide: details.show_quick_start_guide,
+        show_research_indications: details.show_research_indications,
+        show_research_protocols: details.show_research_protocols,
+        show_what_to_expect: details.show_what_to_expect,
+        show_image: details.show_image,
       };
 
       if (existing) {
@@ -281,20 +314,40 @@ const AdminPage = () => {
             <TabsContent value="content" className="space-y-6">
               {/* What Is */}
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">What is {form.name || "this product"}?</label>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">What is {form.name || "this product"}?</label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch checked={details.show_what_is} onCheckedChange={v => setDetails(d => ({ ...d, show_what_is: v }))} />
+                    {details.show_what_is ? "Published" : "Hidden"}
+                  </label>
+                </div>
                 <Textarea value={details.what_is} onChange={e => setDetails(d => ({ ...d, what_is: e.target.value }))} className="bg-muted text-foreground border-border" rows={3} />
               </div>
 
               {/* Mechanism of Action */}
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">Mechanism of Action</label>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Mechanism of Action</label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch checked={details.show_mechanism_of_action} onCheckedChange={v => setDetails(d => ({ ...d, show_mechanism_of_action: v }))} />
+                    {details.show_mechanism_of_action ? "Published" : "Hidden"}
+                  </label>
+                </div>
+                <Textarea value={details.mechanism_of_action} onChange={e => setDetails(d => ({ ...d, mechanism_of_action: e.target.value }))} className="bg-muted text-foreground border-border" rows={3} />
                 <Textarea value={details.mechanism_of_action} onChange={e => setDetails(d => ({ ...d, mechanism_of_action: e.target.value }))} className="bg-muted text-foreground border-border" rows={3} />
               </div>
 
               {/* Key Benefits */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Key Benefits</label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Key Benefits</label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch checked={details.show_key_benefits} onCheckedChange={v => setDetails(d => ({ ...d, show_key_benefits: v }))} />
+                      {details.show_key_benefits ? "Published" : "Hidden"}
+                    </label>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={addBenefit} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                   <Button size="sm" variant="outline" onClick={addBenefit} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                 </div>
                 {details.key_benefits.map((b, i) => (
@@ -309,7 +362,14 @@ const AdminPage = () => {
               {/* Quick Start Guide */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Quick Start Guide</label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Quick Start Guide</label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch checked={details.show_quick_start_guide} onCheckedChange={v => setDetails(d => ({ ...d, show_quick_start_guide: v }))} />
+                      {details.show_quick_start_guide ? "Published" : "Hidden"}
+                    </label>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={addStep} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                   <Button size="sm" variant="outline" onClick={addStep} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                 </div>
                 {details.quick_start_guide.map((s, i) => (
@@ -323,7 +383,14 @@ const AdminPage = () => {
               {/* Research Indications */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Research Indications</label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Research Indications</label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch checked={details.show_research_indications} onCheckedChange={v => setDetails(d => ({ ...d, show_research_indications: v }))} />
+                      {details.show_research_indications ? "Published" : "Hidden"}
+                    </label>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={addIndication} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                   <Button size="sm" variant="outline" onClick={addIndication} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                 </div>
                 {details.research_indications.map((ind, i) => (
@@ -337,7 +404,14 @@ const AdminPage = () => {
               {/* Research Protocols */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Research Protocols</label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Research Protocols</label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch checked={details.show_research_protocols} onCheckedChange={v => setDetails(d => ({ ...d, show_research_protocols: v }))} />
+                      {details.show_research_protocols ? "Published" : "Hidden"}
+                    </label>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={addProtocol} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                   <Button size="sm" variant="outline" onClick={addProtocol} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                 </div>
                 {details.research_protocols.map((p, i) => (
@@ -354,7 +428,14 @@ const AdminPage = () => {
               {/* What to Expect */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">What to Expect</label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">What to Expect</label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch checked={details.show_what_to_expect} onCheckedChange={v => setDetails(d => ({ ...d, show_what_to_expect: v }))} />
+                      {details.show_what_to_expect ? "Published" : "Hidden"}
+                    </label>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={addTimeline} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                   <Button size="sm" variant="outline" onClick={addTimeline} className="h-7 gap-1 text-xs"><Plus className="h-3 w-3" /> Add</Button>
                 </div>
                 {details.what_to_expect.map((t, i) => (
@@ -369,6 +450,13 @@ const AdminPage = () => {
 
             {/* === IMAGE === */}
             <TabsContent value="image">
+              <div className="mb-4 flex items-center justify-between">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Product Image</label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Switch checked={details.show_image} onCheckedChange={v => setDetails(d => ({ ...d, show_image: v }))} />
+                  {details.show_image ? "Published" : "Hidden"}
+                </label>
+              </div>
               <div className="flex flex-col items-center gap-4">
                 {imageUrl ? (
                   <div className="relative">
