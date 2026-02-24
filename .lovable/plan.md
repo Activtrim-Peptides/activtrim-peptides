@@ -1,35 +1,67 @@
 
 
-## Fix: Display Product Images on Shop and Detail Pages
+## Horizontal Product Card Layout (Image on Left)
 
 ### Problem
-The `ProductCard` component ignores the `image_url` prop entirely. Even though the image is saved correctly in the database (confirmed: BPC-157 has a valid image URL), the card always renders a placeholder flask icon. The product detail page also never displays the product image.
+Product images are tall/portrait-oriented vials, but the card image area is landscape (wide and short). This makes the vials appear tiny with wasted horizontal space.
 
-### Changes
+### Solution
+Restructure the ProductCard to a horizontal layout where the image sits on the left side and the product info (name, category, description, price, button) sits on the right. This gives vertical images more room to display at a natural size.
 
-#### 1. `src/components/ProductCard.tsx`
-- Add `image_url` to the destructured props (line 19)
-- Replace the static FlaskConical icon placeholder (lines 32-34) with conditional rendering:
-  - If `image_url` exists: render an `<img>` tag with the product image
-  - If no image: keep the FlaskConical icon as fallback
-- Respect the `show_image` flag from product_details (this is only relevant on the detail page, not the card)
+### File Changed
 
-#### 2. `src/pages/ProductDetailPage.tsx`
-- Add an image display in the header card section, showing the product image when `image_url` is present and `show_image` is not false
-- Use the FlaskConical icon as fallback when no image exists
+**`src/components/ProductCard.tsx`**
+
+Switch from a vertical stack layout to a horizontal row layout:
+
+- Change the outer container from `flex-col` to `flex-row`
+- Image area becomes a fixed-width left column (e.g. `w-28 h-full` or `w-32`) with the image filling it vertically
+- Product info (category badge, name, description, price, button) becomes the right column using `flex-col flex-1`
+- Best Seller badge stays absolutely positioned in the top-right
+- On very small screens, the layout can stay horizontal since the image column is narrow enough
+
+```text
+Current layout:
++---------------------------+
+|       [image area]        |
+|  Category                 |
+|  PRODUCT NAME             |
+|  Description text...      |
+|  $XX.XX    [Add to Cart]  |
++---------------------------+
+
+New layout:
++--------+------------------+
+|        | Category         |
+| [img]  | PRODUCT NAME     |
+|        | Description...   |
+|        | $XX.XX [Add Cart]|
++--------+------------------+
+```
 
 ### Technical Details
 
-**ProductCard image area replacement (lines 32-34):**
+The card container changes from:
 ```tsx
-<div className="mb-4 flex h-32 items-center justify-center rounded-md bg-muted transition-colors group-hover/link:bg-muted/80 overflow-hidden">
+<div className="group relative flex flex-col rounded-lg border border-border bg-card p-5 card-glow-hover">
+```
+To:
+```tsx
+<div className="group relative flex flex-row rounded-lg border border-border bg-card p-4 card-glow-hover gap-4">
+```
+
+The image area changes from a wide landscape box to a narrow tall column:
+```tsx
+<div className="flex w-28 shrink-0 items-center justify-center rounded-md bg-muted overflow-hidden self-stretch">
   {image_url ? (
     <img src={image_url} alt={name} className="h-full w-full object-contain" />
   ) : (
-    <FlaskConical className="h-12 w-12 text-primary/40" />
+    <FlaskConical className="h-10 w-10 text-primary/40" />
   )}
 </div>
 ```
 
-**ProductDetailPage** -- add image display in the header card, before or alongside the product name/description area, conditionally shown when `details?.show_image !== false` and `product.image_url` exists.
+The text/info content wraps in a `flex-col flex-1 min-w-0` container. The Link wraps only the image + name (for clickability). Price and button row stays at the bottom via `mt-auto`.
+
+No other files need changes -- the same `ProductCard` is used by ShopPage, BestSellersPage, and ProductDetailPage's related products.
 
