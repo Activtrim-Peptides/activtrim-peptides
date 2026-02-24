@@ -147,7 +147,9 @@ const ProductDetailPage = () => {
                 const icons = [Beaker, Syringe, Thermometer];
                 if (published.length === 0) return null;
                 return (
-                  <div className={`mt-6 grid grid-cols-${published.length} gap-4 rounded-md border border-border bg-secondary/50 p-4`}>
+                  <div className={`mt-6 grid gap-4 rounded-md border border-border bg-secondary/50 p-4 ${
+                    published.length === 1 ? "grid-cols-1" : published.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                  }`}>
                     {published.map((stat, i) => {
                       const Icon = icons[i] || Beaker;
                       return (
