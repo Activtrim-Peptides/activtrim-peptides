@@ -1,54 +1,36 @@
 
 
-## Fix 4 Product Card Issues
+## Fix Product Detail Page: Remove Gray Image Background + Fix Mobile Overflow
 
-### File: `src/components/ProductCard.tsx`
+### Changes to `src/pages/ProductDetailPage.tsx`
 
-All 4 fixes in one edit:
+**1. Remove gray background behind product image (line 125)**
 
-1. **Remove dark gray background** -- Remove `bg-muted` and `hover:bg-muted/80` from the image container
-2. **Stack price above cart button** -- Change the bottom section from `flex items-center justify-between` (horizontal) to `flex flex-col items-start gap-2` (vertical), and make the button `w-full`
-3. **Fix mobile overflow** -- Change outer container from `flex-row` to `flex-col sm:flex-row`, and image link from `w-28` to `w-full h-40 sm:w-28 sm:h-auto`
-4. **Show more description** -- Change `line-clamp-2` to `line-clamp-3`
-
-### Technical Details
-
-**Line 24** -- outer container:
+Change:
 ```tsx
-// Before
-<div className="... flex flex-row ...">
-// After
-<div className="... flex flex-col sm:flex-row ...">
+<div className="mb-6 flex h-48 md:h-64 items-center justify-center rounded-md bg-muted overflow-hidden">
+```
+To:
+```tsx
+<div className="mb-6 flex h-48 md:h-64 items-center justify-center rounded-md overflow-hidden">
 ```
 
-**Line 31** -- image Link:
+**2. Fix mobile overflow -- make quick stats responsive (line 161-163)**
+
+Change the grid classes so stats stack on mobile instead of forcing 2-3 columns:
 ```tsx
 // Before
-className="flex w-28 shrink-0 ... rounded-md bg-muted overflow-hidden self-stretch ... hover:bg-muted/80"
-// After
-className="flex w-full h-40 sm:w-28 sm:h-auto shrink-0 ... rounded-md overflow-hidden sm:self-stretch"
-```
-
-**Line 47** -- description:
-```tsx
-// Before
-<p className="... line-clamp-2 ...">
-// After
-<p className="... line-clamp-3 ...">
-```
-
-**Lines 49-58** -- price/button section:
-```tsx
-// Before
-<div className="mt-auto flex items-center justify-between">
-  <span ...>${price}</span>
-  <Button size="sm" className="...">...</Button>
-</div>
+published.length === 2 ? "grid-cols-2" : "grid-cols-3"
 
 // After
-<div className="mt-auto flex flex-col items-start gap-2">
-  <span ...>${price}</span>
-  <Button size="sm" className="w-full ...">...</Button>
-</div>
+published.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"
 ```
+
+**3. Add overflow protection to the outer container (line 110)**
+
+Add `overflow-hidden` to `<div className="mx-auto max-w-7xl px-4 py-6">` to prevent any horizontal scroll on mobile.
+
+**4. Add `break-words` to description text (line 134)**
+
+Prevents long unbroken strings from pushing past the container edge on narrow screens.
 
