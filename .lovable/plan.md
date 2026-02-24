@@ -1,34 +1,37 @@
 
 
-## Fix Quick Stats Horizontal Layout (Adaptive Grid)
+## Fix: Quick Stats Not Showing on Product Detail Page
 
-Replace the dynamic Tailwind class `grid-cols-${published.length}` (which gets purged at build time) with a conditional expression using complete class names that Tailwind can detect.
+### Root Cause
 
-### Change
+The `quick_stats` column is empty (`[]`) in the database for all products. When the admin opens a product, the admin panel substitutes default values (Typical Dosage, Administration, Storage) so it *looks* like stats exist -- but they were never actually saved to the database.
 
-**File:** `src/pages/ProductDetailPage.tsx` (line 150)
+The product detail page reads `quick_stats` directly from the database, gets an empty array, and correctly renders nothing.
 
-**Before:**
+### Solution
+
+Apply the same default fallback on the product detail page so that products without explicitly saved quick stats still display the three standard items.
+
+### File Changed
+
+**`src/pages/ProductDetailPage.tsx`** (around line 145)
+
+Replace:
 ```tsx
-<div className={`mt-6 grid grid-cols-${published.length} gap-4 ...`}>
+const quickStats: { ... }[] = details?.quick_stats ?? [];
 ```
 
-**After:**
+With a fallback to default stats when the array is empty:
 ```tsx
-<div className={`mt-6 grid gap-4 rounded-md border border-border bg-secondary/50 p-4 ${
-  published.length === 1 ? "grid-cols-1" : published.length === 2 ? "grid-cols-2" : "grid-cols-3"
-}`}>
+const defaultQuickStats = [
+  { heading: "Typical Dosage", details: "Lyophilized", description: "Powdered form for reconstitution", is_published: true },
+  { heading: "Administration", details: "Subcutaneous", description: "Injection method", is_published: true },
+  { heading: "Storage", details: "2-8°C", description: "Refrigerated storage required", is_published: true },
+];
+const rawStats = details?.quick_stats ?? [];
+const quickStats = rawStats.length > 0 ? rawStats : defaultQuickStats;
 ```
 
-This ensures:
-- **3 published items** -- 3 columns, displayed side by side
-- **2 published items** -- 2 columns, evenly spaced
-- **1 published item** -- full-width single column
-- **0 published items** -- section is hidden entirely (already handled)
+This mirrors what the admin panel already does (line 182 of AdminPage.tsx), ensuring consistent behavior. Once an admin explicitly saves quick stats for a product, those saved values will take precedence over the defaults.
 
-All class names are written in full so Tailwind includes them in the build output.
-
-### Files Changed
-
-- `src/pages/ProductDetailPage.tsx`: One line change on the grid container class
-
+No database changes needed -- this is a one-line frontend fix.
