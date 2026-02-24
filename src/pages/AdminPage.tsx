@@ -29,6 +29,7 @@ interface Product {
   is_best_seller: boolean;
   in_stock: boolean;
   image_url: string | null;
+  stock_quantity: number;
 }
 
 interface BenefitItem { title: string; description: string }
@@ -84,7 +85,7 @@ const AdminPage = () => {
   // Basic info form
   const [form, setForm] = useState({
     name: "", slug: "", description: "", price: "", category: allCategories[0],
-    is_best_seller: false, in_stock: true,
+    is_best_seller: false, in_stock: true, stock_quantity: "0",
   });
 
   // Content form
@@ -143,6 +144,7 @@ const AdminPage = () => {
       is_best_seller: form.is_best_seller,
       in_stock: form.in_stock,
       image_url: imageUrl,
+      stock_quantity: parseInt(form.stock_quantity) || 0,
     };
 
     let productId = editing?.id;
@@ -209,7 +211,7 @@ const AdminPage = () => {
     setCreating(false);
     setForm({
       name: p.name, slug: (p as any).slug || "", description: p.description, price: p.price.toString(),
-      category: p.category, is_best_seller: p.is_best_seller, in_stock: p.in_stock,
+      category: p.category, is_best_seller: p.is_best_seller, in_stock: p.in_stock, stock_quantity: (p.stock_quantity ?? 0).toString(),
     });
     setImageUrl(p.image_url);
     await fetchDetails(p.id);
@@ -218,7 +220,7 @@ const AdminPage = () => {
   const resetForm = () => {
     setEditing(null);
     setCreating(false);
-    setForm({ name: "", slug: "", description: "", price: "", category: allCategories[0], is_best_seller: false, in_stock: true });
+    setForm({ name: "", slug: "", description: "", price: "", category: allCategories[0], is_best_seller: false, in_stock: true, stock_quantity: "0" });
     setDetails(emptyDetails);
     setImageUrl(null);
   };
@@ -293,6 +295,7 @@ const AdminPage = () => {
                 <Input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-muted text-foreground border-border" />
                 <Input placeholder="Slug (e.g. dihexa)" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} className="bg-muted text-foreground border-border" />
                 <Input placeholder="Price" type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="bg-muted text-foreground border-border" />
+                <Input placeholder="Quantity Available" type="number" min="0" value={form.stock_quantity} onChange={e => setForm(f => ({ ...f, stock_quantity: e.target.value }))} className="bg-muted text-foreground border-border" />
                 <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">
                   {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -511,7 +514,7 @@ const AdminPage = () => {
                     </Badge>
                     {p.is_best_seller && <span className="text-xs">⭐</span>}
                   </div>
-                  <p className="text-xs text-muted-foreground">{p.category} · ${p.price}</p>
+                  <p className="text-xs text-muted-foreground">{p.category} · ${p.price} · Qty: {p.stock_quantity ?? 0}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
