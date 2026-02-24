@@ -107,15 +107,15 @@ const ProductDetailPage = () => {
         <meta name="description" content={product.description} />
       </Helmet>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 overflow-hidden">
+      <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Back link */}
         <Link to="/app/shop" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Shop
         </Link>
 
-        <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_340px]">
+        <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_340px] min-w-0">
           {/* Main content */}
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
             {/* Header card */}
             <div className="rounded-lg border border-border bg-card p-6 md:p-8">
               {product.image_url && details?.show_image !== false && (
@@ -123,19 +123,19 @@ const ProductDetailPage = () => {
                   <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
                 </div>
               )}
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <Badge variant="outline" className="mb-3 border-primary/30 text-primary text-[10px]">
                     {product.category}
                   </Badge>
-                  <h1 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-foreground">
+                  <h1 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-foreground break-words [overflow-wrap:anywhere]">
                     {product.name}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed break-words">
+                  <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed break-words [overflow-wrap:anywhere]">
                     {product.description}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right shrink-0">
                   <div className="text-3xl font-black text-foreground">${product.price.toFixed(2)}</div>
                   {product.is_best_seller && (
                     <Badge className="mt-2 gradient-primary border-0 text-primary-foreground text-[10px] font-bold uppercase">
@@ -164,9 +164,9 @@ const ProductDetailPage = () => {
                     {published.map((stat, i) => {
                       const Icon = icons[i] || Beaker;
                       return (
-                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
                           <Icon className="h-4 w-4 text-primary shrink-0" />
-                          <div>
+                          <div className="min-w-0 break-words [overflow-wrap:anywhere]">
                             <div className="font-bold text-foreground">{stat.heading}</div>
                             <div>{stat.details}</div>
                             {stat.description && <div>{stat.description}</div>}
@@ -252,7 +252,7 @@ const ProductDetailPage = () => {
 
             {protocols.length > 0 && details?.show_research_protocols !== false && (
               <ProductDetailSection number={6} title="Research Protocols">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-w-full">
                   <Table>
                     <TableHeader>
                       <TableRow>
