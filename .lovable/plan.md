@@ -1,44 +1,30 @@
 
 
-## Add Fade-In Hero Background Image with Mobile Optimization
+## Fix: Hero Background Image Hidden by Opaque Overlay
 
-### Overview
-Add the uploaded image as a fade-in background behind the hero section on the landing page, with responsive opacity for mobile readability.
+### Root Cause
 
-### Files Changed
+The `gradient-dark` CSS class applies a fully opaque dark gradient (`hsl(0 0% 5%)` to `hsl(0 0% 3%)`). This div sits directly on top of the hero background image and completely covers it, making the image invisible regardless of the fade-in animation.
 
-**1. Save uploaded image**
-- Copy `user-uploads://Untitled_1600_x_900_px.png` to `src/assets/hero-bg.png`
+### Solution
 
-**2. `src/index.css`**
-- Add a `hero-fade-in` keyframe animation: opacity 0 to target over 1.5s ease-out
+Replace the opaque `gradient-dark` overlay with a semi-transparent version that allows the image to show through while still darkening it enough for text readability.
 
-```css
-@keyframes hero-fade-in {
-  from { opacity: 0; }
-  to { opacity: 0.25; }
-}
-.hero-bg-fade {
-  animation: hero-fade-in 1.5s ease-out forwards;
-}
+### File Changed
+
+**`src/pages/LandingPage.tsx`** (line 71)
+
+Replace:
+```tsx
+<div className="absolute inset-0 gradient-dark" />
 ```
 
-**3. `src/pages/LandingPage.tsx`**
-- Import the hero image
-- Add an `<img>` element inside the hero section, positioned absolutely behind gradients and content
-- Use responsive opacity: lower on mobile (`md:` breakpoint bumps it up)
-- Existing gradient overlays remain untouched on top
-
-Structure:
-```text
-<section class="relative overflow-hidden ...">
-  <img src={heroBg} class="absolute inset-0 w-full h-full object-cover
-       opacity-0 hero-bg-fade md:[--hero-opacity:0.3] pointer-events-none" />
-  <div class="absolute inset-0 gradient-dark" />          (existing)
-  <div class="absolute inset-0 bg-[radial-gradient(...)]" /> (existing)
-  <div class="container relative z-10 ...">                (existing content)
-</section>
+With:
+```tsx
+<div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
 ```
 
-Mobile: image fades to ~20% opacity. Desktop: ~30%. The dark gradient overlay on top ensures text stays crisp at all sizes. `object-cover` center-crops the image on narrow screens.
+This creates a gradient that is partially transparent at the top (letting the image show through) and becomes fully opaque at the bottom (clean transition into the next section). Combined with the image fading in at 25-35% opacity, the result will be a subtle, professional background effect with fully legible text.
+
+No other files need to change -- the animation CSS and image import are already correct.
 
