@@ -1,131 +1,168 @@
 
 
-## Multi-Strength Product Variants + Best Seller Badge Fix
+## Promo Code Functionality (Case-Insensitive)
 
-### Overview
+### 1. Database: New `promo_codes` table + orders columns
 
-Products will support multiple strength options (e.g., 5mg, 10mg) each with their own price and stock. The smallest strength is always selected by default. Strength selector buttons will appear on the Shop page (ProductCard) and Product Detail page. The Best Seller badge positioning will also be fixed to stop overlapping the category badge.
-
----
-
-### 1. Database Changes
-
-**New table: `product_variants`**
+**New table `promo_codes`:**
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | uuid | PK, default gen_random_uuid() |
-| product_id | uuid | FK to products.id, NOT NULL |
-| strength_mg | integer | e.g. 5, 10, 15 |
-| label | text | Display label e.g. "5mg", "10mg" |
-| price | numeric | Price for this variant |
-| stock_quantity | integer | Stock for this variant, default 0 |
-| sort_order | integer | For ordering buttons, default 0 |
-| created_at | timestamptz | default now() |
+| id | uuid | PK |
+| friendly_name | text | Admin-only label |
+| code | text | Unique, stored uppercase |
+| discount_type | text | "percentage" or "fixed" |
+| discount_amount | numeric | The value (e.g. 20 for 20% or 10 for $10) |
+| valid_from | timestamptz | Nullable (null = immediately valid) |
+| valid_to | timestamptz | Nullable (null = never expires) |
+| is_active | boolean | Default true |
+| created_at | timestamptz | Default now() |
 
-RLS: Authenticated users can SELECT; admins can INSERT/UPDATE/DELETE.
+- Code is always stored uppercase via a trigger, and lookups use `UPPER()` so "crunch20" and "CRUNCH20" both match.
+- RLS: Anyone can SELECT (for checkout validation); admins can INSERT/UPDATE/DELETE.
 
-**Modify `cart_items`**: Add nullable `variant_id` (uuid) column referencing product_variants.id. Existing cart items without a variant will still work.
-
-**Modify `order_items`**: Add nullable `variant_id` (uuid) and `variant_label` (text) columns so orders record which strength was purchased.
-
----
-
-### 2. Product Card Changes (Shop page, Best Sellers page)
-
-**File: `src/components/ProductCard.tsx`**
-
-- Fetch variants for each product (or receive them as props from parent query).
-- Show small pill/toggle buttons for each strength above the price (e.g., `5mg | 10mg`).
-- Default to the first (smallest sort_order) variant.
-- Price display updates when a different strength is selected.
-- "Add to Cart" passes the selected variant_id.
-- Move the "Best Seller" badge below the category badge or offset it so they don't overlap. Adjust positioning from `right-3 top-3` to `right-3 top-10` (or use a different layout approach).
+**Alter `orders` table:** Add `promo_code` (text, nullable) and `discount_amount` (numeric, default 0) columns.
 
 ---
 
-### 3. Product Detail Page Changes
-
-**File: `src/pages/ProductDetailPage.tsx`**
-
-- Fetch product_variants for the product.
-- Display strength selector buttons in the header card (next to or above the price).
-- Price updates dynamically when selecting a different strength.
-- "Add to Cart" passes the selected variant_id.
-- Sidebar purchase card also shows the strength selector and dynamic price.
-
----
-
-### 4. Cart System Changes
-
-**File: `src/hooks/useCart.tsx`**
-
-- Update `addToCart` signature: `addToCart(productId: string, variantId?: string)`.
-- Cart items with different variants of the same product are treated as separate line items.
-- `fetchCart` query joins `product_variants` to get variant label for display.
-- Update `CartItem` interface to include optional `variant` info (label, price).
-- Subtotal calculation uses variant price when available, falls back to product price.
-
-**File: `src/components/CartDrawer.tsx`**
-
-- Display variant label (e.g., "10mg") next to product name in cart items.
-- Use variant price for line item totals.
-
----
-
-### 5. Checkout Changes
-
-**File: `src/pages/CheckoutPage.tsx`**
-
-- Display variant label next to product name in the order summary.
-- When creating order_items, include variant_id and variant_label.
-- Use variant price for price_at_time.
-
----
-
-### 6. Shop Page + Best Sellers Page Changes
-
-**Files: `src/pages/ShopPage.tsx`, `src/pages/BestSellersPage.tsx`**
-
-- Update product queries to also fetch product_variants (via a joined query or separate query).
-- Pass variants to ProductCard as a prop.
-- Products without variants still display their base price with no strength selector.
-
----
-
-### 7. Admin Page Changes
+### 2. Admin Page: "Promo Codes" Tab
 
 **File: `src/pages/AdminPage.tsx`**
 
-- Add a "Variants" section to the product edit form (new tab or within Basic Info).
-- Allow adding/removing strength variants with fields: label, strength_mg, price, stock_quantity, sort_order.
-- CRUD operations against product_variants table.
+Add a third tab alongside Products and FAQ:
+- List view showing all promo codes (name, code, discount, dates, active status)
+- Add/Edit form with fields: friendly_name, code (auto-uppercased on save), discount_type dropdown, discount_amount, valid_from date, valid_to date (optional), is_active toggle
+- Delete functionality
 
 ---
 
-### 8. Best Seller Badge Fix
+### 3. Checkout Page: Promo Code Input + Discount
 
-**File: `src/components/ProductCard.tsx`**
+**File: `src/pages/CheckoutPage.tsx`**
 
-The badge currently uses `absolute right-3 top-3` which collides with the category badge. Fix by either:
-- Moving it to `right-3 top-10` to sit below the category area, or
-- Placing it inline after the category badge (non-absolute positioning).
+In the Order Summary card, add a promo code section above Subtotal:
 
-The inline approach is cleaner: remove the absolute positioning and place the Best Seller badge next to the category badge in the card content flow.
+```text
+ORDER SUMMARY
+
+[Items list]
+-------- separator --------
+
+Promo Code: [________] [Apply]
+  "CRUNCH20 applied! 20% off"  [Remove]
+
+Subtotal                   $109.98
+  Discount (20%)           -$22.00
+
+Shipping
+  (o) USPS Priority Mail    $17.95
+
+-------- separator --------
+
+Total                       $105.93
+
+[ PLACE ORDER ]
+```
+
+- Input field + "Apply" button
+- On apply: query `promo_codes` where `UPPER(code) = UPPER(input)`, `is_active = true`, and date range is valid
+- Case-insensitive: user can type "crunch20", "Crunch20", or "CRUNCH20" -- all work
+- If invalid/expired: toast error message
+- If valid: show success with discount description and a "Remove" button
+- Discount applies to product subtotal only, never shipping
+- `discountAmount = percentage ? min(subtotal * rate / 100, subtotal) : min(fixedAmount, subtotal)`
+- `total = (subtotal - discountAmount) + shippingCost`
+- On submit: save `promo_code` and `discount_amount` to the order record, include in Slack notification
 
 ---
 
-### Summary of files to create/modify
+### Technical Details
+
+**Migration SQL:**
+
+```sql
+CREATE TABLE public.promo_codes (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  friendly_name TEXT NOT NULL,
+  code TEXT NOT NULL UNIQUE,
+  discount_type TEXT NOT NULL DEFAULT 'percentage',
+  discount_amount NUMERIC NOT NULL DEFAULT 0,
+  valid_from TIMESTAMPTZ,
+  valid_to TIMESTAMPTZ,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Auto-uppercase code on insert/update
+CREATE OR REPLACE FUNCTION uppercase_promo_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.code := UPPER(NEW.code);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_uppercase_promo_code
+  BEFORE INSERT OR UPDATE ON public.promo_codes
+  FOR EACH ROW EXECUTE FUNCTION uppercase_promo_code();
+
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view promo codes"
+  ON public.promo_codes FOR SELECT USING (true);
+CREATE POLICY "Admins can insert promo codes"
+  ON public.promo_codes FOR INSERT
+  WITH CHECK (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can update promo codes"
+  ON public.promo_codes FOR UPDATE
+  USING (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can delete promo codes"
+  ON public.promo_codes FOR DELETE
+  USING (has_role(auth.uid(), 'admin'));
+
+ALTER TABLE public.orders
+  ADD COLUMN promo_code TEXT,
+  ADD COLUMN discount_amount NUMERIC DEFAULT 0;
+```
+
+**Checkout validation (key logic):**
+
+```tsx
+const applyPromo = async () => {
+  const { data } = await supabase
+    .from("promo_codes")
+    .select("*")
+    .ilike("code", promoInput.trim())  // case-insensitive match
+    .eq("is_active", true)
+    .single();
+
+  if (!data) { toast.error("Invalid promo code"); return; }
+
+  const now = new Date();
+  if (data.valid_from && new Date(data.valid_from) > now) { toast.error("Promo not yet active"); return; }
+  if (data.valid_to && new Date(data.valid_to) < now) { toast.error("Promo code expired"); return; }
+
+  setAppliedPromo(data);
+  toast.success(`${data.code} applied!`);
+};
+
+const discountAmount = appliedPromo
+  ? appliedPromo.discount_type === "percentage"
+    ? Math.min(subtotal * appliedPromo.discount_amount / 100, subtotal)
+    : Math.min(appliedPromo.discount_amount, subtotal)
+  : 0;
+
+const total = (subtotal - discountAmount) + shippingCost;
+```
+
+---
+
+### Files to modify
 
 | File | Action |
 |------|--------|
-| Database migration | Create `product_variants` table, alter `cart_items` and `order_items` |
-| `src/components/ProductCard.tsx` | Add strength selector, fix badge overlap |
-| `src/pages/ProductDetailPage.tsx` | Add strength selector, dynamic price |
-| `src/hooks/useCart.tsx` | Support variant_id in cart operations |
-| `src/components/CartDrawer.tsx` | Show variant label |
-| `src/pages/ShopPage.tsx` | Fetch and pass variants |
-| `src/pages/BestSellersPage.tsx` | Fetch and pass variants |
-| `src/pages/CheckoutPage.tsx` | Show variant label, save variant in order |
-| `src/pages/AdminPage.tsx` | Variant CRUD in product editor |
+| Database migration | Create `promo_codes` table with uppercase trigger, alter `orders` |
+| `src/pages/AdminPage.tsx` | Add "Promo Codes" tab with CRUD |
+| `src/pages/CheckoutPage.tsx` | Add promo input, discount calc, updated totals |
+| `src/integrations/supabase/types.ts` | Auto-updated after migration |
 
