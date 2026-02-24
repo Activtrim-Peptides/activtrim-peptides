@@ -1,24 +1,26 @@
 
 
-## Reduce Hero Gradient Overlay Opacity
+## Fix: Show Full Head in Hero Background Image
 
 ### Problem
-The current gradient overlay (`from-background/60 via-background/80 to-background`) is too opaque, hiding the background image.
+The background image uses `object-cover` which center-crops the image. On most viewports, this cuts off the top of the person's head.
 
 ### Solution
-Lighten the overlay so the image is more visible while keeping text readable.
+Add `object-position: top` to the hero image so it anchors to the top of the image rather than centering, ensuring the head is fully visible.
 
-**`src/pages/LandingPage.tsx`** (line 71)
+### File Changed
+
+**`src/pages/LandingPage.tsx`** (line 70)
 
 Replace:
 ```tsx
-<div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+<img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-0 hero-bg-fade pointer-events-none" />
 ```
 
 With:
 ```tsx
-<div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/50 to-background" />
+<img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover object-top opacity-0 hero-bg-fade pointer-events-none" />
 ```
 
-This reduces the top opacity from 60% to 20% and mid from 80% to 50%, while keeping the bottom fully opaque for a clean transition into the next section. The image will be much more visible in the upper portion of the hero.
+Single class addition (`object-top`). No other files change.
 
