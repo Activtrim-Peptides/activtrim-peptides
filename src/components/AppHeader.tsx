@@ -10,6 +10,7 @@ const navLinks = [
   { to: "/app/shop", label: "Shop" },
   { to: "/app/categories", label: "Categories" },
   { to: "/app/faq", label: "Peptide FAQ" },
+  { to: "/app/contact", label: "Contact Us" },
 ];
 
 const AppHeader = () => {
