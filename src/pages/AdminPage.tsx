@@ -333,19 +333,27 @@ const AdminPage = () => {
         await supabase.from("product_details").insert(detailsPayload);
       }
 
-      // Save variants
-      // Delete existing variants and re-insert
-      await supabase.from("product_variants" as any).delete().eq("product_id", productId);
-      if (productVariants.length > 0) {
-        const variantPayloads = productVariants.map(v => ({
+      // Save variants -- delete existing first, with error checking
+      const { error: delErr } = await supabase
+        .from("product_variants")
+        .delete()
+        .eq("product_id", productId);
+
+      if (delErr) {
+        toast.error("Failed to update variants: " + delErr.message);
+      } else if (productVariants.length > 0) {
+        const variantPayloads = productVariants.map((v, idx) => ({
           product_id: productId,
           label: v.label,
           strength_mg: parseInt(v.strength_mg) || 0,
           price: parseFloat(v.price) || 0,
           stock_quantity: parseInt(v.stock_quantity) || 0,
-          sort_order: parseInt(v.sort_order) || 0,
+          sort_order: parseInt(v.sort_order) || idx,
         }));
-        await supabase.from("product_variants" as any).insert(variantPayloads);
+        const { error: insErr } = await supabase.from("product_variants").insert(variantPayloads);
+        if (insErr) {
+          toast.error("Failed to save variants: " + insErr.message);
+        }
       }
     }
 
@@ -369,7 +377,7 @@ const AdminPage = () => {
   };
 
   const fetchVariants = async (productId: string) => {
-    const { data } = await supabase.from("product_variants" as any).select("*").eq("product_id", productId).order("sort_order");
+    const { data } = await supabase.from("product_variants").select("*").eq("product_id", productId).order("sort_order");
     if (data) {
       setProductVariants((data as any[]).map(v => ({
         id: v.id,
