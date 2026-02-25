@@ -52,13 +52,19 @@ const formatExpiry = (value: string) => {
 
 const CheckoutPage = () => {
   const { items, subtotal, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [shippingMethod, setShippingMethod] = useState("usps");
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_type: string; discount_amount: number } | null>(null);
   const [applyingPromo, setApplyingPromo] = useState(false);
+
+  // Redirect to login if not authenticated
+  if (!authLoading && !user) {
+    navigate("/login", { replace: true });
+    return null;
+  }
 
   const shippingCost = SHIPPING_OPTIONS.find((o) => o.id === shippingMethod)!.price;
   const discountAmount = appliedPromo

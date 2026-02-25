@@ -36,13 +36,13 @@ const App = () => (
           <AuthProvider>
             <CartProvider>
               <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<LandingPage />} />
+                {/* Redirect root to the store */}
+                <Route path="/" element={<Navigate to="/app/home" replace />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
 
-                {/* Protected app routes */}
-                <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                {/* Public app routes */}
+                <Route path="/app" element={<AppLayout />}>
                   <Route index element={<Navigate to="/app/home" replace />} />
                   <Route path="home" element={<HomePage />} />
                   <Route path="best-sellers" element={<BestSellersPage />} />
@@ -53,7 +53,8 @@ const App = () => (
                   <Route path="product/:slug" element={<ProductDetailPage />} />
                   <Route path="checkout" element={<CheckoutPage />} />
                   <Route path="order-confirmation/:orderId" element={<OrderConfirmationPage />} />
-                  <Route path="admin" element={<AdminPage />} />
+                  {/* Admin stays protected */}
+                  <Route path="admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
                 </Route>
 
                 <Route path="*" element={<NotFound />} />

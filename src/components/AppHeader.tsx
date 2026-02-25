@@ -1,8 +1,9 @@
-import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, LogOut, User, Shield } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ShoppingCart, LogOut, LogIn, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const navLinks = [
   { to: "/app/home", label: "Home" },
@@ -14,9 +15,19 @@ const navLinks = [
 ];
 
 const AppHeader = () => {
-  const { signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const { totalItems, setIsOpen } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleCartClick = () => {
+    if (!user) {
+      toast.info("Please sign in to use your cart");
+      navigate("/login");
+      return;
+    }
+    setIsOpen(true);
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -40,7 +51,7 @@ const AppHeader = () => {
         </nav>
 
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {user && isAdmin && (
             <Link to="/app/admin">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
                 <Shield className="h-5 w-5" />
@@ -48,7 +59,7 @@ const AppHeader = () => {
             </Link>
           )}
           <button
-            onClick={() => setIsOpen(true)}
+            onClick={handleCartClick}
             className="relative rounded-md p-2 text-muted-foreground transition-colors hover:text-primary"
           >
             <ShoppingCart className="h-5 w-5" />
@@ -58,9 +69,17 @@ const AppHeader = () => {
               </span>
             )}
           </button>
-          <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-primary">
-            <LogOut className="h-5 w-5" />
-          </Button>
+          {user ? (
+            <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-primary">
+              <LogOut className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Link to="/login">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+                <LogIn className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </header>

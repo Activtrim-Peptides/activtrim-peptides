@@ -93,7 +93,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { fetchCart(); }, [fetchCart]);
 
   const addToCart = async (productId: string, variantId?: string) => {
-    if (!user) return;
+    if (!user) {
+      toast.info("Please sign in to add items to your cart");
+      return;
+    }
     const existing = items.find(i => i.product_id === productId && (i.variant_id || null) === (variantId || null));
     if (existing) {
       await updateQuantity(existing.id, existing.quantity + 1);

@@ -65,7 +65,7 @@ export type Database = {
           inquiry_type: string
           message: string
           phone: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -75,7 +75,7 @@ export type Database = {
           inquiry_type: string
           message: string
           phone: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -85,7 +85,7 @@ export type Database = {
           inquiry_type?: string
           message?: string
           phone?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
