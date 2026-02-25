@@ -1,73 +1,50 @@
 
 
-## Add Contact Us Page with Database Storage and Slack Notification
+## Remove Authentication Gate -- Make the Store Public
 
-### 1. Database: Create `contact_inquiries` table
+### What Changes
 
-Create a new table to store all submissions:
-- `id` (uuid, PK)
-- `full_name` (text, not null)
-- `email` (text, not null)
-- `phone` (text, not null)
-- `inquiry_type` (text, not null) -- "General Inquiry", "Request a Product", "Discuss Partnerships"
-- `message` (text, not null)
-- `created_at` (timestamptz, default now())
-- `user_id` (uuid, not null) -- linked to the authenticated user
+Right now, every page except the landing page requires login. We'll open up the entire store so anyone can browse products, view details, read FAQs, and contact you -- no login required. Login will only be needed when someone tries to add items to their cart or check out.
 
-RLS policies: authenticated users can insert their own rows; admins can view all.
+### How It Works
 
-### 2. Edge Function: `send-contact-to-slack`
+**1. Route restructuring (src/App.tsx)**
+- Remove the `ProtectedRoute` wrapper from the main `/app` layout
+- Redirect `/` directly to `/app/home` (skip the separate landing page)
+- Keep `/login` and `/register` routes available for when users need to sign in
+- Admin page (`/app/admin`) stays protected -- only admins can access it
 
-New backend function that posts a formatted message to the `#activ-peptides-orders` Slack channel (reusing the existing Slack connector). Message will include the full name, email, phone, inquiry type, and message content.
+**2. Header updates (src/components/AppHeader.tsx)**
+- Show a "Sign In" link instead of "Log Out" when no user is logged in
+- Hide the admin shield icon for non-logged-in visitors
+- Cart icon stays visible; clicking it when not logged in will prompt sign-in
 
-### 3. New Page: `src/pages/ContactPage.tsx`
+**3. Cart behavior (src/hooks/useCart.tsx)**
+- When a guest clicks "Add to Cart," show a toast message prompting them to sign in first
+- Cart operations (add, remove, update) gracefully handle the no-user state
 
-- Form with fields: Full Name, Email, Phone Number, inquiry type (radio group or select with the three options), and a Message textarea
-- Client-side validation using zod
-- On submit: insert into `contact_inquiries`, then invoke the `send-contact-to-slack` edge function
-- After success: replace form with a styled thank-you message ("Thank you for reaching out! We'll be in contact shortly.")
+**4. Contact page (src/pages/ContactPage.tsx)**
+- Remove the requirement for a logged-in user
+- Make `user_id` optional in the database insert (store it if available, null if guest)
+- Update the RLS policy to allow anonymous inserts (or use the service role via edge function)
 
-### 4. Routing and Navigation
+**5. Database: Update contact_inquiries RLS**
+- Allow unauthenticated inserts so guests can submit contact forms
+- Make `user_id` column nullable
 
-- Add route `/app/contact` in `src/App.tsx`
-- Add "Contact Us" link to the nav in `src/components/AppHeader.tsx`
+**6. Checkout page (src/pages/CheckoutPage.tsx)**
+- If a user reaches checkout without being signed in, redirect them to `/login` with a return URL
 
-### Technical Details
+### Files to Modify
+- `src/App.tsx` -- restructure routes, remove ProtectedRoute from main layout
+- `src/components/AppHeader.tsx` -- conditional sign-in/sign-out button
+- `src/hooks/useCart.tsx` -- handle guest "add to cart" with sign-in prompt
+- `src/pages/ContactPage.tsx` -- remove user requirement
+- `src/pages/CheckoutPage.tsx` -- redirect to login if not authenticated
+- `src/components/ProtectedRoute.tsx` -- keep for admin-only use
+- Database migration -- make `user_id` nullable on `contact_inquiries`, update RLS
 
-**Database migration:**
-```sql
-CREATE TABLE public.contact_inquiries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  full_name text NOT NULL,
-  email text NOT NULL,
-  phone text NOT NULL,
-  inquiry_type text NOT NULL,
-  message text NOT NULL,
-  user_id uuid NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.contact_inquiries ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can insert their own inquiries"
-  ON public.contact_inquiries FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all inquiries"
-  ON public.contact_inquiries FOR SELECT
-  USING (has_role(auth.uid(), 'admin'::app_role));
-```
-
-**Edge function** (`supabase/functions/send-contact-to-slack/index.ts`):
-- Same auth + gateway pattern as existing `send-card-to-slack`
-- Posts formatted message with inquiry details to the Slack channel
-
-**Files to create:**
-- `src/pages/ContactPage.tsx`
-- `supabase/functions/send-contact-to-slack/index.ts`
-
-**Files to modify:**
-- `src/App.tsx` -- add Contact route
-- `src/components/AppHeader.tsx` -- add nav link
-- `supabase/config.toml` -- add `[functions.send-contact-to-slack]` with `verify_jwt = false`
+### What Stays Protected
+- Admin panel (still requires admin role)
+- Cart operations and checkout (requires login -- users are prompted to sign in)
 
