@@ -56,6 +56,39 @@ export type Database = {
           },
         ]
       }
+      contact_inquiries: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          inquiry_type: string
+          message: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          inquiry_type: string
+          message: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          inquiry_type?: string
+          message?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       faq_items: {
         Row: {
           answer: string

@@ -17,6 +17,7 @@ import BestSellersPage from "@/pages/BestSellersPage";
 import ShopPage from "@/pages/ShopPage";
 import CategoriesPage from "@/pages/CategoriesPage";
 import FAQPage from "@/pages/FAQPage";
+import ContactPage from "@/pages/ContactPage";
 import AdminPage from "@/pages/AdminPage";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 import CheckoutPage from "@/pages/CheckoutPage";
@@ -48,6 +49,7 @@ const App = () => (
                   <Route path="shop" element={<ShopPage />} />
                   <Route path="categories" element={<CategoriesPage />} />
                   <Route path="faq" element={<FAQPage />} />
+                  <Route path="contact" element={<ContactPage />} />
                   <Route path="product/:slug" element={<ProductDetailPage />} />
                   <Route path="checkout" element={<CheckoutPage />} />
                   <Route path="order-confirmation/:orderId" element={<OrderConfirmationPage />} />
