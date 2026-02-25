@@ -333,27 +333,91 @@ const AdminPage = () => {
         await supabase.from("product_details").insert(detailsPayload);
       }
 
-      // Save variants -- delete existing first, with error checking
-      const { error: delErr } = await supabase
+      // Validate variant rows before saving
+      for (let i = 0; i < productVariants.length; i++) {
+        const v = productVariants[i];
+        if (!v.label.trim()) {
+          toast.error(`Variant ${i + 1} is missing a label`);
+          setSaving(false);
+          return;
+        }
+        if (isNaN(parseFloat(v.price)) || parseFloat(v.price) < 0) {
+          toast.error(`Variant ${i + 1} has an invalid price`);
+          setSaving(false);
+          return;
+        }
+        if (isNaN(parseInt(v.strength_mg)) || parseInt(v.strength_mg) < 0) {
+          toast.error(`Variant ${i + 1} has an invalid strength`);
+          setSaving(false);
+          return;
+        }
+      }
+
+      // ID-preserving variant sync
+      const { data: existingVariants } = await supabase
         .from("product_variants")
-        .delete()
+        .select("id")
         .eq("product_id", productId);
 
-      if (delErr) {
-        toast.error("Failed to update variants: " + delErr.message);
-      } else if (productVariants.length > 0) {
-        const variantPayloads = productVariants.map((v, idx) => ({
+      const existingIds = (existingVariants || []).map(v => v.id);
+      const formIds = productVariants.filter(v => v.id).map(v => v.id!);
+      const toDelete = existingIds.filter(id => !formIds.includes(id));
+      const toUpdate = productVariants.filter(v => v.id && existingIds.includes(v.id));
+      const toInsert = productVariants.filter(v => !v.id);
+
+      let variantError = false;
+
+      // Update existing variants
+      for (const v of toUpdate) {
+        const { error } = await supabase
+          .from("product_variants")
+          .update({
+            label: v.label,
+            strength_mg: parseInt(v.strength_mg) || 0,
+            price: parseFloat(v.price) || 0,
+            stock_quantity: parseInt(v.stock_quantity) || 0,
+            sort_order: parseInt(v.sort_order) || 0,
+          })
+          .eq("id", v.id!);
+        if (error) {
+          toast.error("Failed to update variant: " + error.message);
+          variantError = true;
+          break;
+        }
+      }
+
+      // Insert new variants
+      if (!variantError && toInsert.length > 0) {
+        const insertPayloads = toInsert.map((v, idx) => ({
           product_id: productId,
           label: v.label,
           strength_mg: parseInt(v.strength_mg) || 0,
           price: parseFloat(v.price) || 0,
           stock_quantity: parseInt(v.stock_quantity) || 0,
-          sort_order: parseInt(v.sort_order) || idx,
+          sort_order: parseInt(v.sort_order) || (toUpdate.length + idx),
         }));
-        const { error: insErr } = await supabase.from("product_variants").insert(variantPayloads);
-        if (insErr) {
-          toast.error("Failed to save variants: " + insErr.message);
+        const { error } = await supabase.from("product_variants").insert(insertPayloads);
+        if (error) {
+          toast.error("Failed to save new variants: " + error.message);
+          variantError = true;
         }
+      }
+
+      // Delete removed variants
+      if (!variantError && toDelete.length > 0) {
+        const { error } = await supabase
+          .from("product_variants")
+          .delete()
+          .in("id", toDelete);
+        if (error) {
+          toast.error("Failed to remove variants: " + error.message);
+          variantError = true;
+        }
+      }
+
+      if (variantError) {
+        setSaving(false);
+        return;
       }
     }
 
@@ -379,7 +443,7 @@ const AdminPage = () => {
   const fetchVariants = async (productId: string) => {
     const { data } = await supabase.from("product_variants").select("*").eq("product_id", productId).order("sort_order");
     if (data) {
-      setProductVariants((data as any[]).map(v => ({
+      setProductVariants(data.map(v => ({
         id: v.id,
         label: v.label,
         strength_mg: String(v.strength_mg),
