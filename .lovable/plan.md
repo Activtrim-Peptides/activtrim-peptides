@@ -1,30 +1,60 @@
 
 
-## Bug Fix: Cart Unique Constraint Blocking Different Variants
+## Fix: Variant Duplication Bug in Admin Panel
 
-### Problem
+### Root Cause
 
-The `cart_items` table has a unique constraint on `(user_id, product_id)` that was created before the variant system existed. This means the database only allows **one row per product per user**, regardless of which variant is selected. When you add BPC-157 5mg and then try to add BPC-157 10mg, the database insert silently fails because it violates this constraint.
+In `handleSave()` (line 338), the variant delete call uses `as any` type casting and has zero error handling:
+
+```ts
+await supabase.from("product_variants" as any).delete().eq("product_id", productId);
+```
+
+The `as any` cast is unnecessary (the table IS in the generated types) and the delete failure is completely swallowed. Every save blindly inserts new variants without confirming old ones were removed, causing exponential duplication.
 
 ### Fix
 
-**Database migration** -- Drop the old unique constraint and create a new one that includes `variant_id`:
+**1. Clean up existing duplicate data in the database**
 
-```sql
-ALTER TABLE public.cart_items
-  DROP CONSTRAINT cart_items_user_id_product_id_key;
+Delete all duplicate BPC-157 variants, keeping only one of each (5mg and 10mg) at the correct prices.
 
-CREATE UNIQUE INDEX cart_items_user_product_variant_key
-  ON public.cart_items (user_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'));
+**2. Fix `src/pages/AdminPage.tsx` -- variant save logic (lines 336-349)**
+
+Replace the fragile delete-all-then-insert approach with a smarter strategy:
+
+- Remove all `as any` casts on `product_variants` queries (the table exists in the types)
+- Add error handling to the delete call
+- Use a two-step approach: first delete variants by product_id, verify it succeeded, then insert new ones
+- If delete fails, abort the variant save and show an error toast
+
+```ts
+// Save variants -- delete existing first, with error checking
+const { error: delErr } = await supabase
+  .from("product_variants")
+  .delete()
+  .eq("product_id", productId);
+
+if (delErr) {
+  toast.error("Failed to update variants: " + delErr.message);
+} else if (productVariants.length > 0) {
+  const variantPayloads = productVariants.map((v, idx) => ({
+    product_id: productId,
+    label: v.label,
+    strength_mg: parseInt(v.strength_mg) || 0,
+    price: parseFloat(v.price) || 0,
+    stock_quantity: parseInt(v.stock_quantity) || 0,
+    sort_order: parseInt(v.sort_order) || idx,
+  }));
+  await supabase.from("product_variants").insert(variantPayloads);
+}
 ```
 
-Using `COALESCE` ensures that items without a variant (where `variant_id` is NULL) still get proper uniqueness handling, since NULL values are not considered equal in unique indexes.
-
-No frontend code changes are needed -- the cart logic already correctly distinguishes items by variant. The database constraint was the sole blocker.
+Also remove `as any` from `fetchVariants` (line 372) and any other `product_variants` queries in the file.
 
 ### Files to modify
 
 | File | Action |
 |------|--------|
-| Database migration | Drop old unique constraint, create new one including variant_id |
+| Database (data cleanup) | Delete 14 duplicate BPC-157 variants, keep 2 |
+| `src/pages/AdminPage.tsx` | Remove `as any` casts, add error handling to variant delete/insert |
 
