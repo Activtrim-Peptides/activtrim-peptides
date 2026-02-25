@@ -163,6 +163,7 @@ const AdminPage = () => {
   const [promoEditing, setPromoEditing] = useState(false);
 
   // ── Top-level tab ──
+  const formRef = useRef<HTMLDivElement>(null);
   const [adminTab, setAdminTab] = useState<"products" | "faq" | "promo">("products");
 
   const fetchProducts = async () => {
@@ -456,6 +457,7 @@ const AdminPage = () => {
     }
   };
 
+
   const startEdit = async (p: Product) => {
     setEditing(p);
     setCreating(false);
@@ -465,6 +467,9 @@ const AdminPage = () => {
     });
     setImageUrl(p.image_url);
     await Promise.all([fetchDetails(p.id), fetchVariants(p.id)]);
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const resetForm = () => {
@@ -608,7 +613,7 @@ const AdminPage = () => {
           )}
 
           {isFormOpen && (
-            <div className="mb-8 rounded-lg border border-border bg-card p-6">
+            <div ref={formRef} className="mb-8 rounded-lg border border-border bg-card p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-sm font-bold uppercase text-foreground">{editing ? "Edit Product" : "New Product"}</h2>
                 <button onClick={resetForm}><X className="h-4 w-4 text-muted-foreground" /></button>
