@@ -48,17 +48,17 @@ const ContactPage = () => {
   });
 
   const onSubmit = async (values: ContactFormValues) => {
-    if (!user) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from("contact_inquiries" as any).insert({
+      const insertPayload: any = {
         full_name: values.fullName,
         email: values.email,
         phone: values.phone,
         inquiry_type: values.inquiryType,
         message: values.message,
-        user_id: user.id,
-      } as any);
+      };
+      if (user) insertPayload.user_id = user.id;
+      const { error } = await supabase.from("contact_inquiries" as any).insert(insertPayload);
 
       if (error) throw error;
 
