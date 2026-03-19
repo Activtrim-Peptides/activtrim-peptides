@@ -16,8 +16,9 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
 const SHIPPING_OPTIONS = [
-  { id: "usps", label: "USPS Priority Mail", days: "2-3 days", price: 17.95 },
-  { id: "fedex", label: "FedEx 2nd Day Air", days: "2 days", price: 26.95 },
+  { id: "pickup", label: "Local Pickup", days: "Same day", price: 0.00 },
+  { id: "usps", label: "USPS Priority Mail", days: "2-3 days", price: 10.00 },
+  { id: "fedex", label: "FedEx 2nd Day Air", days: "2 days", price: 28.00 },
 ];
 
 const checkoutSchema = z.object({
