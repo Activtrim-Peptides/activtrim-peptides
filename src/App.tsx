@@ -12,6 +12,8 @@ import AppLayout from "@/components/AppLayout";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import HomePage from "@/pages/HomePage";
 import BestSellersPage from "@/pages/BestSellersPage";
 import ShopPage from "@/pages/ShopPage";
