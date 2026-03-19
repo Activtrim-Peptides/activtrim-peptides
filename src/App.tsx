@@ -42,6 +42,8 @@ const App = () => (
                 <Route path="/" element={<Navigate to="/app/home" replace />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 {/* Public app routes */}
                 <Route path="/app" element={<AppLayout />}>

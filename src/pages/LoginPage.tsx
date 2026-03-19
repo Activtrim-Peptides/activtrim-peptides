@@ -59,6 +59,9 @@ const LoginPage = () => {
           <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground font-bold uppercase tracking-wider">
             {loading ? "Signing in..." : "Sign In"}
           </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            <Link to="/forgot-password" className="font-semibold text-primary hover:underline">Forgot your password?</Link>
+          </p>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
