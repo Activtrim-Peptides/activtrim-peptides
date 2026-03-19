@@ -1,38 +1,21 @@
 
 
-## Add Password Reset Flow
+## Update Shipping Options on Checkout
 
-### What Changes
+Single file change in `src/pages/CheckoutPage.tsx` — update the `SHIPPING_OPTIONS` array:
 
-Add a "Forgot password?" link to the login page and a dedicated reset password page so users can recover their accounts via email.
+- Add "Local Pickup" at $0.00
+- Change USPS Priority Mail from $17.95 to $10.00
+- Change FedEx 2nd Day Air from $26.95 to $28.00
 
-### Implementation
+```typescript
+const SHIPPING_OPTIONS = [
+  { id: "pickup", label: "Local Pickup", days: "Same day", price: 0.00 },
+  { id: "usps", label: "USPS Priority Mail", days: "2-3 days", price: 10.00 },
+  { id: "fedex", label: "FedEx 2nd Day Air", days: "2 days", price: 28.00 },
+];
+```
 
-**1. Add "Forgot Password" link to Login page (`src/pages/LoginPage.tsx`)**
-- Add a "Forgot your password?" link below the password field, linking to `/forgot-password`
-
-**2. Create Forgot Password page (`src/pages/ForgotPasswordPage.tsx`)**
-- Simple form with email input
-- Calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
-- Shows success toast telling user to check their email
-
-**3. Create Reset Password page (`src/pages/ResetPasswordPage.tsx`)**
-- Checks for `type=recovery` in URL hash on mount
-- Shows new password + confirm password form
-- Calls `supabase.auth.updateUser({ password })` to set the new password
-- Redirects to `/login` on success
-
-**4. Add routes (`src/App.tsx`)**
-- `/forgot-password` → ForgotPasswordPage
-- `/reset-password` → ResetPasswordPage
-
-Both pages will match the existing dark theme and branding style used on the login/register pages.
-
-### Files to Create
-- `src/pages/ForgotPasswordPage.tsx`
-- `src/pages/ResetPasswordPage.tsx`
-
-### Files to Edit
-- `src/pages/LoginPage.tsx` -- add forgot password link
-- `src/App.tsx` -- add two new routes
+### File Modified
+- `src/pages/CheckoutPage.tsx` (lines ~22-25)
 
