@@ -654,6 +654,7 @@ const AdminPage = () => {
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="faq">FAQ</TabsTrigger>
           <TabsTrigger value="promo">Promo Codes</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
         </TabsList>
 
         {/* ════════ PRODUCTS TAB ════════ */}
