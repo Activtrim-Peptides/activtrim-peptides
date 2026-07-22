@@ -251,6 +251,19 @@ const AdminPage = () => {
     setOrdersLoading(false);
   };
 
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase.from("orders" as any).update({ status: newStatus }).eq("id", orderId);
+    if (error) {
+      toast.error("Failed to update status: " + error.message);
+      return;
+    }
+    toast.success(`Order marked as ${newStatus}`);
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    if (selectedOrder?.id === orderId) {
+      setSelectedOrder({ ...selectedOrder, status: newStatus });
+    }
+  };
+
   const resetPromoForm = () => {
     setPromoForm({ id: "", friendly_name: "", code: "", discount_type: "percentage", discount_amount: "", valid_from: "", valid_to: "", is_active: true });
     setPromoEditing(false);
