@@ -1299,6 +1299,27 @@ const AdminPage = () => {
                     </div>
 
                     <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Order Status</h3>
+                          <Select value={selectedOrder.status} onValueChange={(value) => updateOrderStatus(selectedOrder.id, value)}>
+                            <SelectTrigger className="h-9 w-[160px] bg-muted border-border">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="shipping">Shipping</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                              <SelectItem value="invalid">Invalid</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Badge variant={selectedOrder.status === "completed" ? "default" : selectedOrder.status === "cancelled" || selectedOrder.status === "invalid" ? "destructive" : "secondary"} className="w-fit text-[10px] capitalize">
+                          {selectedOrder.status}
+                        </Badge>
+                      </div>
+
                       <div>
                         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Customer</h3>
                         <p className="text-sm font-medium text-foreground">{selectedOrder.shipping_name}</p>
