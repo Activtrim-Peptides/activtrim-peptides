@@ -1256,9 +1256,18 @@ const AdminPage = () => {
                               ${Number(order.subtotal).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={order.status === "completed" ? "default" : "secondary"} className="text-[10px] capitalize">
-                                {order.status}
-                              </Badge>
+                              <Select value={order.status} onValueChange={(value) => updateOrderStatus(order.id, value)}>
+                                <SelectTrigger className="h-8 w-[130px] text-xs bg-muted border-border">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="shipping">Shipping</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                  <SelectItem value="invalid">Invalid</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                               {new Date(order.created_at).toLocaleDateString()}
