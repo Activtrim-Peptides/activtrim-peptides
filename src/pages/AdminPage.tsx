@@ -302,7 +302,7 @@ const AdminPage = () => {
     setPromoEditing(true);
   };
 
-  useEffect(() => { fetchProducts(); fetchFaqSections(); fetchPromoCodes(); }, []);
+  useEffect(() => { fetchProducts(); fetchFaqSections(); fetchPromoCodes(); fetchOrders(); }, []);
 
   if (authLoading) return null;
   if (!isAdmin) return <Navigate to="/app/home" replace />;
