@@ -78,17 +78,9 @@ const CheckoutPage = () => {
   const applyPromo = async () => {
     if (!promoInput.trim()) return;
     setApplyingPromo(true);
-    const { data } = await supabase
-      .from("promo_codes" as any)
-      .select("*")
-      .ilike("code", promoInput.trim())
-      .eq("is_active", true)
-      .maybeSingle();
-    const promo = data as any;
-    if (!promo) { toast.error("Invalid promo code"); setApplyingPromo(false); return; }
-    const now = new Date();
-    if (promo.valid_from && new Date(promo.valid_from) > now) { toast.error("Promo code not yet active"); setApplyingPromo(false); return; }
-    if (promo.valid_to && new Date(promo.valid_to) < now) { toast.error("Promo code has expired"); setApplyingPromo(false); return; }
+    const { data, error } = await supabase.rpc("validate_promo_code" as any, { _code: promoInput.trim() });
+    const promo = Array.isArray(data) ? (data[0] as any) : null;
+    if (error || !promo) { toast.error("Invalid promo code"); setApplyingPromo(false); return; }
     setAppliedPromo({ code: promo.code, discount_type: promo.discount_type, discount_amount: Number(promo.discount_amount) });
     toast.success(`${promo.code} applied!`);
     setApplyingPromo(false);
