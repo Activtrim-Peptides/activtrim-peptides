@@ -8,8 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Trash2, Edit2, Plus, X, Upload, Image as ImageIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, Edit2, Plus, X, Upload, Image as ImageIcon, ChevronDown, ChevronRight, Package, Calendar, DollarSign, Users } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const allCategories = [
