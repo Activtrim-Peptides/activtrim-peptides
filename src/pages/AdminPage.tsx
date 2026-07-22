@@ -164,9 +164,38 @@ const AdminPage = () => {
   });
   const [promoEditing, setPromoEditing] = useState(false);
 
+  // ── Orders state ──
+  interface OrderItem {
+    id: string;
+    quantity: number;
+    price_at_time: number;
+    variant_label: string | null;
+    products: { name: string } | null;
+  }
+
+  interface Order {
+    id: string;
+    status: string;
+    subtotal: number;
+    discount_amount: number | null;
+    shipping_name: string;
+    shipping_email: string;
+    shipping_address: string;
+    shipping_city: string;
+    shipping_state: string;
+    shipping_zip: string;
+    promo_code: string | null;
+    created_at: string;
+    order_items: OrderItem[];
+  }
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   // ── Top-level tab ──
   const formRef = useRef<HTMLDivElement>(null);
-  const [adminTab, setAdminTab] = useState<"products" | "faq" | "promo">("products");
+  const [adminTab, setAdminTab] = useState<"products" | "faq" | "promo" | "orders">("products");
 
   const fetchProducts = async () => {
     const { data } = await supabase.from("products").select("*").order("name");
