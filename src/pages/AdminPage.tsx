@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Trash2, Edit2, Plus, X, Upload, Image as ImageIcon, ChevronDown, ChevronRight, Package, Calendar, DollarSign, Users } from "lucide-react";
 import { Navigate } from "react-router-dom";
@@ -248,6 +249,19 @@ const AdminPage = () => {
     }
     setOrders((data as unknown as Order[]) || []);
     setOrdersLoading(false);
+  };
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase.from("orders" as any).update({ status: newStatus }).eq("id", orderId);
+    if (error) {
+      toast.error("Failed to update status: " + error.message);
+      return;
+    }
+    toast.success(`Order marked as ${newStatus}`);
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    if (selectedOrder?.id === orderId) {
+      setSelectedOrder({ ...selectedOrder, status: newStatus });
+    }
   };
 
   const resetPromoForm = () => {
@@ -1242,9 +1256,18 @@ const AdminPage = () => {
                               ${Number(order.subtotal).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={order.status === "completed" ? "default" : "secondary"} className="text-[10px] capitalize">
-                                {order.status}
-                              </Badge>
+                              <Select value={order.status} onValueChange={(value) => updateOrderStatus(order.id, value)}>
+                                <SelectTrigger className="h-8 w-[130px] text-xs bg-muted border-border">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="shipping">Shipping</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                  <SelectItem value="invalid">Invalid</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                               {new Date(order.created_at).toLocaleDateString()}
@@ -1276,6 +1299,27 @@ const AdminPage = () => {
                     </div>
 
                     <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Order Status</h3>
+                          <Select value={selectedOrder.status} onValueChange={(value) => updateOrderStatus(selectedOrder.id, value)}>
+                            <SelectTrigger className="h-9 w-[160px] bg-muted border-border">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="shipping">Shipping</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                              <SelectItem value="invalid">Invalid</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Badge variant={selectedOrder.status === "completed" ? "default" : selectedOrder.status === "cancelled" || selectedOrder.status === "invalid" ? "destructive" : "secondary"} className="w-fit text-[10px] capitalize">
+                          {selectedOrder.status}
+                        </Badge>
+                      </div>
+
                       <div>
                         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Customer</h3>
                         <p className="text-sm font-medium text-foreground">{selectedOrder.shipping_name}</p>
