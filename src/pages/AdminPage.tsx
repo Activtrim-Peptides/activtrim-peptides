@@ -226,6 +226,30 @@ const AdminPage = () => {
     setPromoLoading(false);
   };
 
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items(
+          id,
+          quantity,
+          price_at_time,
+          variant_label,
+          products(name)
+        )
+      `)
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Failed to load orders: " + error.message);
+      setOrdersLoading(false);
+      return;
+    }
+    setOrders((data as unknown as Order[]) || []);
+    setOrdersLoading(false);
+  };
+
   const resetPromoForm = () => {
     setPromoForm({ id: "", friendly_name: "", code: "", discount_type: "percentage", discount_amount: "", valid_from: "", valid_to: "", is_active: true });
     setPromoEditing(false);
