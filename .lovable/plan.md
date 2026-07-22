@@ -1,21 +1,48 @@
+## Add Orders Dashboard to Admin Panel
 
+### Problem
+Right now there is no way to see how many people purchased or completed checkout. Orders exist in the database, but the admin panel only has Products, FAQ, and Promo Codes tabs.
 
-## Update Shipping Options on Checkout
+### Solution
+Add a new **Orders** tab to the admin panel that shows purchase and checkout metrics and a list of every order.
 
-Single file change in `src/pages/CheckoutPage.tsx` — update the `SHIPPING_OPTIONS` array:
+### What you'll see
+- Total orders
+- Total revenue (sum of order subtotals)
+- Average order value
+- Recent orders table with:
+  - Order ID
+  - Customer name and email
+  - Shipping address
+  - Order total
+  - Status
+  - Date
+  - Line items (product names, quantities, prices)
 
-- Add "Local Pickup" at $0.00
-- Change USPS Priority Mail from $17.95 to $10.00
-- Change FedEx 2nd Day Air from $26.95 to $28.00
+### Implementation
 
-```typescript
-const SHIPPING_OPTIONS = [
-  { id: "pickup", label: "Local Pickup", days: "Same day", price: 0.00 },
-  { id: "usps", label: "USPS Priority Mail", days: "2-3 days", price: 10.00 },
-  { id: "fedex", label: "FedEx 2nd Day Air", days: "2 days", price: 28.00 },
-];
-```
+1. **Add an "orders" tab to `src/pages/AdminPage.tsx`**
+   - Extend the `adminTab` state to include `"orders"`
+   - Add a `<TabsTrigger value="orders">Orders</TabsTrigger>`
 
-### File Modified
-- `src/pages/CheckoutPage.tsx` (lines ~22-25)
+2. **Create order dashboard state and fetcher**
+   - Fetch orders with related items and product names:
+     ```typescript
+     supabase
+       .from("orders")
+       .select("*, order_items(id, quantity, price_at_time, products(name), variant_label)")
+       .order("created_at", { ascending: false });
+     ```
+   - Compute totals: count, revenue, average order value
 
+3. **Render the Orders tab**
+   - Summary cards at the top (total orders, total revenue, average order value)
+   - Table of recent orders below
+   - Expandable rows or a modal to show line items per order
+
+### Files changed
+- `src/pages/AdminPage.tsx`
+
+### Notes
+- The current checkout creates every order with status `"pending"`. The dashboard will treat every created order as a purchase/checkout completion. If you later add payment success/failure handling, we can update statuses and filter by `"completed"`.
+- No database migration is needed; the data already exists in `public.orders` and `public.order_items`.

@@ -8,8 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Trash2, Edit2, Plus, X, Upload, Image as ImageIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, Edit2, Plus, X, Upload, Image as ImageIcon, ChevronDown, ChevronRight, Package, Calendar, DollarSign, Users } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const allCategories = [
@@ -162,9 +164,38 @@ const AdminPage = () => {
   });
   const [promoEditing, setPromoEditing] = useState(false);
 
+  // ── Orders state ──
+  interface OrderItem {
+    id: string;
+    quantity: number;
+    price_at_time: number;
+    variant_label: string | null;
+    products: { name: string } | null;
+  }
+
+  interface Order {
+    id: string;
+    status: string;
+    subtotal: number;
+    discount_amount: number | null;
+    shipping_name: string;
+    shipping_email: string;
+    shipping_address: string;
+    shipping_city: string;
+    shipping_state: string;
+    shipping_zip: string;
+    promo_code: string | null;
+    created_at: string;
+    order_items: OrderItem[];
+  }
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   // ── Top-level tab ──
   const formRef = useRef<HTMLDivElement>(null);
-  const [adminTab, setAdminTab] = useState<"products" | "faq" | "promo">("products");
+  const [adminTab, setAdminTab] = useState<"products" | "faq" | "promo" | "orders">("products");
 
   const fetchProducts = async () => {
     const { data } = await supabase.from("products").select("*").order("name");
@@ -193,6 +224,30 @@ const AdminPage = () => {
     const { data } = await supabase.from("promo_codes" as any).select("*").order("created_at", { ascending: false });
     setPromoCodes(data || []);
     setPromoLoading(false);
+  };
+
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items(
+          id,
+          quantity,
+          price_at_time,
+          variant_label,
+          products(name)
+        )
+      `)
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Failed to load orders: " + error.message);
+      setOrdersLoading(false);
+      return;
+    }
+    setOrders((data as unknown as Order[]) || []);
+    setOrdersLoading(false);
   };
 
   const resetPromoForm = () => {
@@ -247,7 +302,7 @@ const AdminPage = () => {
     setPromoEditing(true);
   };
 
-  useEffect(() => { fetchProducts(); fetchFaqSections(); fetchPromoCodes(); }, []);
+  useEffect(() => { fetchProducts(); fetchFaqSections(); fetchPromoCodes(); fetchOrders(); }, []);
 
   if (authLoading) return null;
   if (!isAdmin) return <Navigate to="/app/home" replace />;
@@ -599,6 +654,7 @@ const AdminPage = () => {
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="faq">FAQ</TabsTrigger>
           <TabsTrigger value="promo">Promo Codes</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
         </TabsList>
 
         {/* ════════ PRODUCTS TAB ════════ */}
@@ -1107,6 +1163,185 @@ const AdminPage = () => {
                 </div>
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        {/* ════════ ORDERS TAB ════════ */}
+        <TabsContent value="orders" className="space-y-6">
+          {ordersLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Card className="border-border bg-card">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Orders</CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-black text-foreground">{orders.length}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-border bg-card">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Revenue</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-black text-foreground">
+                      ${orders.reduce((sum, o) => sum + Number(o.subtotal), 0).toFixed(2)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-border bg-card">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Avg Order Value</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-black text-foreground">
+                      ${orders.length ? (orders.reduce((sum, o) => sum + Number(o.subtotal), 0) / orders.length).toFixed(2) : "0.00"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Orders table */}
+              {orders.length === 0 ? (
+                <p className="text-center text-muted-foreground py-10">No orders yet.</p>
+              ) : (
+                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Order ID</TableHead>
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Customer</TableHead>
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Items</TableHead>
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</TableHead>
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Date</TableHead>
+                          <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orders.map((order) => (
+                          <TableRow key={order.id} className="border-border">
+                            <TableCell className="font-mono text-xs text-foreground">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                            <TableCell>
+                              <div className="text-sm font-medium text-foreground">{order.shipping_name}</div>
+                              <div className="text-xs text-muted-foreground">{order.shipping_email}</div>
+                            </TableCell>
+                            <TableCell className="text-sm text-foreground">
+                              {order.order_items.reduce((sum, item) => sum + item.quantity, 0)} items
+                            </TableCell>
+                            <TableCell className="text-sm font-semibold text-foreground">
+                              ${Number(order.subtotal).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={order.status === "completed" ? "default" : "secondary"} className="text-[10px] capitalize">
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)}>
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Order detail modal */}
+              {selectedOrder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-lg">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="text-lg font-black uppercase tracking-wider text-foreground">
+                        Order {selectedOrder.id.slice(0, 8).toUpperCase()}
+                      </h2>
+                      <button onClick={() => setSelectedOrder(null)} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Customer</h3>
+                        <p className="text-sm font-medium text-foreground">{selectedOrder.shipping_name}</p>
+                        <p className="text-sm text-muted-foreground">{selectedOrder.shipping_email}</p>
+                      </div>
+
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Shipping Address</h3>
+                        <p className="text-sm text-foreground">{selectedOrder.shipping_address}</p>
+                        <p className="text-sm text-foreground">{selectedOrder.shipping_city}, {selectedOrder.shipping_state} {selectedOrder.shipping_zip}</p>
+                      </div>
+
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Items</h3>
+                        <div className="space-y-2">
+                          {selectedOrder.order_items.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between rounded-md border border-border bg-muted/50 p-3">
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{item.products?.name ?? "Unknown Product"}</p>
+                                {item.variant_label && <p className="text-xs text-muted-foreground">{item.variant_label}</p>}
+                                <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                              </div>
+                              <p className="text-sm font-semibold text-foreground">${(item.quantity * Number(item.price_at_time)).toFixed(2)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border border-border bg-muted/50 p-4 space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Subtotal</span>
+                          <span className="font-semibold text-foreground">${Number(selectedOrder.subtotal).toFixed(2)}</span>
+                        </div>
+                        {selectedOrder.discount_amount ? (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Discount</span>
+                            <span className="font-semibold text-primary">-${Number(selectedOrder.discount_amount).toFixed(2)}</span>
+                          </div>
+                        ) : null}
+                        {selectedOrder.promo_code ? (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Promo Code</span>
+                            <span className="font-mono text-xs text-foreground">{selectedOrder.promo_code}</span>
+                          </div>
+                        ) : null}
+                        <div className="border-t border-border pt-1 mt-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-bold text-foreground">Total</span>
+                            <span className="font-black text-primary">${Number(selectedOrder.subtotal).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Placed on {new Date(selectedOrder.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex justify-end">
+                      <Button onClick={() => setSelectedOrder(null)}>Close</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
